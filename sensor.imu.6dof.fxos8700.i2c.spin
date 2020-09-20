@@ -203,7 +203,7 @@ PUB AccelScale(g): curr_scale
     case g
         2, 4, 8:
             g := lookdownz(g: 2, 4, 8)
-            _ares := lookupz(g: 0_244, 0_488, 0_976)
+            _ares := lookupz(g: 61, 122, 244)
         other:
             curr_scale := (curr_scale & core#FS_BITS)
             return lookupz(curr_scale: 2, 4, 8)
