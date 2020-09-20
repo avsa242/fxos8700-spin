@@ -14,9 +14,17 @@ CON
 
     SCK_MAX_FREQ        = 1_000_000
     I2C_MAX_FREQ        = 400_000
-    SLAVE_ADDR          = $1F << 1
 
-' R/W bit (7)
+' Slave address options
+'   Unfortunately, these aren't mapped logically in the chip, so
+'   here are some constants to use, instead
+    SLAVE_ADDR          = $1E << 1                      ' %00
+    SLAVE_ADDR_1E       = SLAVE_ADDR                    ' %00 (default)
+    SLAVE_ADDR_1D       = $1D << 1                      ' %01
+    SLAVE_ADDR_1C       = $1C << 1                      ' %10
+    SLAVE_ADDR_1F       = $1F << 1                      ' %11
+
+' SPI R/W bit (7)
     R                   = 0
     W                   = 1 << 7
 

@@ -65,19 +65,29 @@ VAR
 
     long _ares, _abiasraw[3]
     long _mres, _mbiasraw[3]
+    byte _slave_addr
 
 PUB Null
 'This is not a top-level object  
 
 PUB Start{}
-' Start using default I2C pins @ 100kHz
-    startx(DEF_SCL, DEF_SDA, DEF_HZ)
+' Start using default I2C pins @ 100kHz, default slave address
+    startx(DEF_SCL, DEF_SDA, DEF_HZ, %00)
 
-PUB Startx(SCL_PIN, SDA_PIN, SCL_HZ): okay | tmp
+PUB Startx(SCL_PIN, SDA_PIN, SCL_HZ, SL_ADDR_BITS): okay | tmp
 
     if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31)
         okay := i2c.setupx(SCL_PIN, SDA_PIN, SCL_HZ)
         time.usleep (core#TPOR)
+' Unfortunately, the chip's mapping of SAx bits to the slave address isn't
+'   logical, so to work around it, determine it conditionally:
+        case SL_ADDR_BITS
+            %00: _slave_addr := core#SLAVE_ADDR_1E
+            %01: _slave_addr := core#SLAVE_ADDR_1D
+            %10: _slave_addr := core#SLAVE_ADDR_1C
+            %11: _slave_addr := core#SLAVE_ADDR_1F
+            other: _slave_addr := core#SLAVE_ADDR_1E
+
         if deviceid{} == core#DEVID_RESP
             defaults{}
             return okay
@@ -436,22 +446,22 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
 ' Read nr_bytes from device into ptr_buff
     case reg_nr                                     ' Validate regs
         $01, $03, $05, $33, $35, $37, $39, $3b, $3d:' Prioritize data output
-            cmd_pkt.byte[0] := SLAVE_WR
+            cmd_pkt.byte[0] := _slave_addr
             cmd_pkt.byte[1] := reg_nr
             i2c.start{}                             ' S
             i2c.wr_block(@cmd_pkt, 2)               ' SL|W, reg_nr
             i2c.start{}                             ' Sr
-            i2c.write(SLAVE_RD)                     ' SL|R
+            i2c.write(_slave_addr | 1)              ' SL|R
             repeat tmp from nr_bytes-1 to 0
                 byte[ptr_buff][tmp] := i2c.read(tmp == 0)
             i2c.stop{}                              ' P
         $00, $02, $04, $06, $09..$18, $1d..$32, $34, $36, $38, $3a, $3e..$78:
-            cmd_pkt.byte[0] := SLAVE_WR
+            cmd_pkt.byte[0] := _slave_addr
             cmd_pkt.byte[1] := reg_nr
             i2c.start{}                             ' S
             i2c.wr_block(@cmd_pkt, 2)               ' SL|W, reg_nr
             i2c.start{}                             ' Sr
-            i2c.write(SLAVE_RD)                     ' SL|R
+            i2c.write(_slave_addr | 1)              ' SL|R
             i2c.rd_block(ptr_buff, nr_bytes, true)  ' R 0..nr_bytes-1
             i2c.stop{}                              ' P
         OTHER:
@@ -462,7 +472,7 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
     case reg_nr
         $09, $0a, $0e, $0f, $11..$15, $17..$1d, $1f..$21, $23..$31, $3f..$44,{
         } $52, $54..$5d, $5f..$78:
-            cmd_pkt.byte[0] := SLAVE_WR
+            cmd_pkt.byte[0] := _slave_addr
             cmd_pkt.byte[1] := reg_nr
             i2c.start{}                             ' S
             i2c.wr_block(@cmd_pkt, 2)               ' SL|W, reg_nr

@@ -24,6 +24,7 @@ CON
     I2C_SCL     = cfg#SCL
     I2C_SDA     = cfg#SDA
     I2C_HZ      = 400_000
+    SL_ADDR_BITS= %11                               ' %00..11 ($1E, 1D, 1C, 1F)
 ' --
 
 VAR
@@ -189,7 +190,7 @@ PUB Setup{}
     ser.clear{}
     ser.strln(string("Serial terminal started"))
 
-    if imu.startx(I2C_SCL, I2C_SDA, I2C_HZ)
+    if imu.startx(I2C_SCL, I2C_SDA, I2C_HZ, SL_ADDR_BITS)
         ser.strln(string("FXOS8700 driver started"))
     else
         ser.strln(string("FXOS8700 driver failed to start - halting"))
