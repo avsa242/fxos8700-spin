@@ -196,9 +196,20 @@ PUB AccelOpMode(mode): curr_mode
 
 PUB AccelScale(g): curr_scale
 ' Sets the full-scale range of the Accelerometer, in g's
-'   Valid values:
+'   Valid values: 2, 4, 8
 '   Any other value polls the chip and returns the current setting
-    curr_scale := $00
+    curr_scale := 0
+    readreg(core#XYZ_DATA_CFG, 1, @curr_scale)
+    case g
+        2, 4, 8:
+            g := lookdownz(g: 2, 4, 8)
+            _ares := lookupz(g: 0_244, 0_488, 0_976)
+        other:
+            curr_scale := (curr_scale & core#FS_BITS)
+            return lookupz(curr_scale: 2, 4, 8)
+
+    g := (curr_scale & core#FS_MASK) | g
+    writereg(core#XYZ_DATA_CFG, 1, @g)
 
 PUB CalibrateAccel{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples
 ' Calibrate the accelerometer
@@ -428,7 +439,7 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
             i2c.start{}                             ' Sr
             i2c.write(SLAVE_RD)                     ' SL|R
             repeat tmp from nr_bytes-1 to 0
-                byte[ptr_buff] := i2c.read(tmp == 0)
+                byte[ptr_buff][tmp] := i2c.read(tmp == 0)
             i2c.stop{}                              ' P
         $00, $02, $04, $06, $09..$18, $1d..$32, $34, $36, $38, $3a, $3e..$78:
             cmd_pkt.byte[0] := SLAVE_WR
