@@ -143,7 +143,9 @@ PUB AccelData(ax, ay, az) | tmp[2]
 
 PUB AccelDataOverrun{}: flag
 ' Indicates previously acquired data has been overwritten
-    flag := $00
+    flag := 0
+    readreg(core#STATUS, 1, @flag)
+    return ((flag >> 6) & core#ZYXOW_BITS) == %111
 
 PUB AccelDataRate(Hz): curr_hz
 ' Set accelerometer output data rate, in Hz
