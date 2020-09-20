@@ -36,13 +36,30 @@ CON
 
     F_SETUP             = $09
     TRIG_CFG            = $0A
-    SYSMOD              = $0B
+    SYSMOD_REG          = $0B
+    SYSMOD_REGMASK      = $FF
+        FGERR           = 7
+        FGT             = 2
+        SYSMOD          = 0
+        FGT_BITS        = %11111
+        SYSMOD_BITS     = %11
+        FGERR_MASK      = (1 << FGERR) ^ SYSMOD_REGMASK
+        FGT_MASK        = (FGT_BITS << FGT) ^ SYSMOD_REGMASK
+        SYSMOD_MASK     = SYSMOD_BITS ^ SYSMOD_REGMASK
+
     INT_SOURCE          = $0C
 
     WHO_AM_I            = $0D
         DEVID_RESP      = $C7
 
     XYZ_DATA_CFG        = $0E
+    XYZ_DATA_CFG_MASK   = $13
+        HPF_OUT         = 4
+        FS              = 0
+        FS_BITS         = %11
+        HPF_OUT_MASK    = (1 << HPF_OUT) ^ XYZ_DATA_CFG_MASK
+        FS_MASK         = FS_BITS ^ XYZ_DATA_CFG_MASK
+
     HP_FILTER_CUTOFF    = $0F
     PL_STATUS           = $10
     PL_CFG              = $11
@@ -69,7 +86,22 @@ CON
     PULSE_LTCY          = $27
     PULSE_WIND          = $28
     ASLP_COUNT          = $29
+
     CTRL_REG1           = $2A
+    CTRL_REG1_MASK      = $FF
+        ASLP_RATE       = 6
+        DR              = 3
+        LNOISE          = 2
+        F_READ          = 1
+        ACTIVE          = 0
+        ASLP_RATE_BITS  = %11
+        DR_BITS         = %111
+        ASLP_RATE_MASK  = (ASLP_RATE_BITS << ASLP_RATE) ^ CTRL_REG1_MASK
+        DR_MASK         = (DR_BITS << DR) ^ CTRL_REG1_MASK
+        LNOISE_MASK     = (1 << LNOISE) ^ CTRL_REG1_MASK
+        F_READ_MASK     = (1 << F_READ) ^ CTRL_REG1_MASK
+        ACTIVE_MASK     = ASLP_RATE_BITS ^ CTRL_REG1_MASK
+
     CTRL_REG2           = $2B
     CTRL_REG3           = $2C
     CTRL_REG4           = $2D

@@ -51,6 +51,10 @@ CON
     BYPASS                  = 0
     FIFO                    = 1
 
+' Operating modes
+    STANDBY                 = 0
+    MEASURE                 = 1
+
 OBJ
 
     i2c     : "com.i2c"
@@ -132,10 +136,10 @@ PUB AccelClearInt{} | tmp
 
 PUB AccelData(ax, ay, az) | tmp[2]
 ' Reads the Accelerometer output registers
-    ' read raw accel data into @tmp
-    long[ax] := ~~tmp.word[X_AXIS] - _abiasraw[X_AXIS]
-    long[ay] := ~~tmp.word[Y_AXIS] - _abiasraw[Y_AXIS]
-    long[az] := ~~tmp.word[Z_AXIS] - _abiasraw[Z_AXIS]
+    readreg(core#OUT_X_MSB, 6, @tmp)
+    long[ax] := ~~tmp.word[2]
+    long[ay] := ~~tmp.word[1]
+    long[az] := ~~tmp.word[0]
 
 PUB AccelDataOverrun{}: flag
 ' Indicates previously acquired data has been overwritten
@@ -163,6 +167,22 @@ PUB AccelInt{}: flag
 ' Flag indicating accelerometer interrupt asserted
 '   Returns TRUE if interrupt asserted, FALSE if not
     flag := $00
+
+PUB AccelOpMode(mode): curr_mode
+' Set accelerometer operating mode
+'   Valid values:
+'       STANDBY (0): Standby
+'       MEASURE (1): Measurement mode
+'   Any other value polls the chip and returns the current setting
+    curr_mode := 0
+    readreg(core#CTRL_REG1, 1, @curr_mode)
+    case mode
+        STANDBY, MEASURE:
+        other:
+            return (curr_mode & 1)
+
+    mode := ((curr_mode & core#ACTIVE_MASK) | mode) & core#CTRL_REG1_MASK
+    writereg(core#CTRL_REG1, 1, @mode)
 
 PUB AccelScale(g): curr_scale
 ' Sets the full-scale range of the Accelerometer, in g's
@@ -199,7 +219,7 @@ PUB CalibrateAccel{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples
     fifoenabled(FALSE)
     fifomode(BYPASS)
 
-PUB CalibrateMag(samples) | magmin[3], magmax[3], magtmp[3], axis, mx, my, mz, msb, lsb
+PUB CalibrateMag{} | magmin[3], magmax[3], magtmp[3], axis, mx, my, mz, msb, lsb, samples
 ' Calibrates the Magnetometer on the FXOS8700 IMU module
     magtmp[0] := magtmp[1] := magtmp[2] := 0    'Initialize all variables to 0
     magmin[0] := magmin[1] := magmin[2] := 0
@@ -270,6 +290,10 @@ PUB Interrupt{}: flag
 ' Flag indicating one or more interrupts asserted
 '   Returns TRUE if one or more interrupts asserted, FALSE if not
     flag := $00
+
+PUB IntMask(mask): curr_mask
+
+PUB IntThresh(thresh): curr_thr
 
 PUB MagBias(mxbias, mybias, mzbias, rw)
 ' Read or write/manually set Magnetometer calibration offset values
@@ -371,6 +395,8 @@ PUB MagScale(scale): curr_scl
 '   Any other value polls the chip and returns the current setting
     curr_scl := $00
 
+PUB OpMode(mode): curr_mode
+
 PUB Temperature{}: temp
 ' Get temperature from chip
 '   Returns: Temperature in hundredths of a degree Celsius (1000 = 10.00 deg C)
@@ -381,40 +407,41 @@ PUB TempDataReady{}: flag
 '   Returns TRUE or FALSE
     flag := $00
 
-PUB XLGDataRate(Hz): curr_rate
-' Set output data rate, in Hz, of accelerometer and gyroscope
-'   Valid values:
-'   Any other value polls the chip and returns the current setting
-    curr_rate := $00
-
 PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
-' Read from device
-' Validate register - allow only registers that are not marked 'reserved'
-    case reg_nr
-        $00..$06, $09..$18, $1d..$78:
+' Read nr_bytes from device into ptr_buff
+    case reg_nr                                     ' Validate regs
+        $01, $03, $05, $33, $35, $37, $39, $3b, $3d:' Prioritize data output
             cmd_pkt.byte[0] := SLAVE_WR
             cmd_pkt.byte[1] := reg_nr
-            i2c.start{}                                     ' S
-            i2c.wr_block(@cmd_pkt, 2)                       ' SL|W, reg_nr
-            i2c.start{}                                     ' Rs
-            i2c.write(SLAVE_RD)                             ' SL|R
-            i2c.rd_block(ptr_buff, nr_bytes, true)          ' R 0..nr_bytes-1
-            i2c.stop{}                                      ' P
+            i2c.start{}                             ' S
+            i2c.wr_block(@cmd_pkt, 2)               ' SL|W, reg_nr
+            i2c.start{}                             ' Sr
+            i2c.write(SLAVE_RD)                     ' SL|R
+            i2c.rd_block(ptr_buff, nr_bytes, true)  ' R 0..nr_bytes-1
+            i2c.stop{}                              ' P
+        $00, $02, $04, $06, $09..$18, $1d..$32, $34, $36, $38, $3a, $3e..$78:
+            cmd_pkt.byte[0] := SLAVE_WR
+            cmd_pkt.byte[1] := reg_nr
+            i2c.start{}                             ' S
+            i2c.wr_block(@cmd_pkt, 2)               ' SL|W, reg_nr
+            i2c.start{}                             ' Sr
+            i2c.write(SLAVE_RD)                     ' SL|R
+            i2c.rd_block(ptr_buff, nr_bytes, true)  ' R 0..nr_bytes-1
+            i2c.stop{}                              ' P
         OTHER:
             return
 
-PRI writeReg(device, reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
-' Write to device
-'   Validate register - allow only registers that are writeable, and not 'reserved'
+PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
+' Write nr_bytes to reg_nr
     case reg_nr
         $09, $0a, $0e, $0f, $11..$15, $17..$1d, $1f..$21, $23..$31, $3f..$44,{
         } $52, $54..$5d, $5f..$78:
             cmd_pkt.byte[0] := SLAVE_WR
             cmd_pkt.byte[1] := reg_nr
-            i2c.start{}                                     ' S
-            i2c.wr_block(@cmd_pkt, 2)                       ' SL|W, reg_nr
-            i2c.wr_block(ptr_buff, nr_bytes)                ' W ptr_buff[0..nr_bytes-1]
-            i2c.stop{}                                      ' P
+            i2c.start{}                             ' S
+            i2c.wr_block(@cmd_pkt, 2)               ' SL|W, reg_nr
+            i2c.wr_block(ptr_buff, nr_bytes)        ' W ptr_buff[0..nr_bytes-1]
+            i2c.stop{}                              ' P
 
         OTHER:
             return
