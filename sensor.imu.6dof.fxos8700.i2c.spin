@@ -75,7 +75,7 @@ PUB Start{}
     startx(DEF_SCL, DEF_SDA, DEF_HZ, %00)
 
 PUB Startx(SCL_PIN, SDA_PIN, SCL_HZ, SL_ADDR_BITS): okay | tmp
-
+' Start using custom pins, I2C bus freq, slave address bits
     if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31)
         okay := i2c.setupx(SCL_PIN, SDA_PIN, SCL_HZ)
         time.usleep (core#TPOR)
@@ -91,7 +91,7 @@ PUB Startx(SCL_PIN, SDA_PIN, SCL_HZ, SL_ADDR_BITS): okay | tmp
         if deviceid{} == core#DEVID_RESP
             defaults{}
             return okay
-    stop{}
+    stop{}                                          ' Something above failed
     return FALSE
 
 PUB Stop{}
@@ -101,14 +101,13 @@ PUB Stop{}
 PUB Defaults{}
 
 PUB AccelADCRes(bits): curr_res
+' dummy method
 
 PUB AccelAxisEnabled(xyz_mask): curr_mask
-' Enable data output for Accelerometer - per axis
-'   Valid values: FALSE (0) or TRUE (1 or -1), for each axis
-'   Any other value polls the chip and returns the current setting
+' dummy method
     curr_mask := $00
 
-PUB AccelBias(axbias, aybias, azbias, rw)
+PUB AccelBias(axbias, aybias, azbias, rw) ' TODO
 ' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
 '       rw:
@@ -139,7 +138,7 @@ PUB AccelBias(axbias, aybias, azbias, rw)
                     _abiasraw[Z_AXIS] := azbias
                 OTHER:
 
-PUB AccelClearInt{} | tmp
+PUB AccelClearInt{} | tmp   ' TODO
 ' Clears out any interrupts set up on the Accelerometer
 '   and resets all Accelerometer interrupt registers to their default values.
     tmp := $00
@@ -153,6 +152,9 @@ PUB AccelData(ax, ay, az) | tmp[2]
 
 PUB AccelDataOverrun{}: flag
 ' Indicates previously acquired data has been overwritten
+'   Returns:
+'       TRUE (-1): data overrun
+'       FALSE (0): no data overrun
     flag := 0
     readreg(core#STATUS, 1, @flag)
     return ((flag >> 6) & core#ZYXOW_BITS) == %111
@@ -174,8 +176,8 @@ PUB AccelDataRate(Hz): curr_hz
     writereg(core#CTRL_REG1, 1, @Hz)
 
 PUB AccelDataReady{}: flag
-' Accelerometer sensor new data available
-'   Returns TRUE or FALSE
+' Flag indicating new accelerometer data available
+'   Returns TRUE (-1) if data ready, FALSE otherwise
     flag := 0
     readreg(core#STATUS, 1, @flag)
     return (flag & core#ZYXDR_BITS) == %111
@@ -187,10 +189,13 @@ PUB AccelG(ax, ay, az) | tmpx, tmpy, tmpz
     long[ay] := tmpy * _ares
     long[az] := tmpz * _ares
 
-PUB AccelInt{}: flag
+PUB AccelInt{}: flag 'TODO
 ' Flag indicating accelerometer interrupt asserted
 '   Returns TRUE if interrupt asserted, FALSE if not
     flag := $00
+
+PUB AccelLowPassFilter(Hz): curr_rate
+' dummy method
 
 PUB AccelOpMode(mode): curr_mode
 ' Set accelerometer operating mode
@@ -225,7 +230,7 @@ PUB AccelScale(g): curr_scale
     g := (curr_scale & core#FS_MASK) | g
     writereg(core#XYZ_DATA_CFG, 1, @g)
 
-PUB CalibrateAccel{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples
+PUB CalibrateAccel{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples 'TODO
 ' Calibrate the accelerometer
 '   NOTE: The accelerometer must be oriented with the package top facing up for this method to be successful
     tmpx := tmpy := tmpz := axis := samples := 0
@@ -254,7 +259,7 @@ PUB CalibrateAccel{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples
     fifoenabled(FALSE)
     fifomode(BYPASS)
 
-PUB CalibrateMag{} | magmin[3], magmax[3], magtmp[3], axis, mx, my, mz, msb, lsb, samples
+PUB CalibrateMag{} | magmin[3], magmax[3], magtmp[3], axis, mx, my, mz, msb, lsb, samples 'TODO
 ' Calibrates the Magnetometer on the FXOS8700 IMU module
     magtmp[0] := magtmp[1] := magtmp[2] := 0    'Initialize all variables to 0
     magmin[0] := magmin[1] := magmin[2] := 0
@@ -280,57 +285,47 @@ PUB CalibrateMag{} | magmin[3], magmax[3], magtmp[3], axis, mx, my, mz, msb, lsb
 
 PUB DeviceID{}: id
 ' Read device identification
-'   Returns: 
+'   Returns: $C7
     readreg(core#WHO_AM_I, 1, @id)
 
-PUB FIFOEnabled(enabled): curr_setting
+PUB FIFOEnabled(enabled): curr_setting 'TODO
 ' Enable FIFO memory
 '   Valid values: FALSE (0), TRUE(1 or -1)
 '   Any other value polls the chip and returns the current setting
     curr_setting := $00
 
-PUB FIFOFull: flag
+PUB FIFOFull: flag 'TODO
 ' FIFO Threshold status
 '   Returns: FALSE (0): lower than threshold level, TRUE(-1): at or higher than threshold level
     flag := $00
 
-PUB FIFOMode(mode): curr_mode
+PUB FIFOMode(mode): curr_mode 'TODO
 ' Set FIFO behavior
 '   Valid values:
 '   Any other value polls the chip and returns the current setting
     curr_mode := $00
 
-PUB FIFOThreshold(level): curr_lvl
+PUB FIFOThreshold(level): curr_lvl 'TODO
 ' Set FIFO threshold level
 '   Valid values:
 '   Any other value polls the chip and returns the current setting
     curr_lvl := $00
 
-PUB FIFOUnreadSamples: nr_samples
+PUB FIFOUnreadSamples: nr_samples 'TODO
 ' Number of unread samples stored in FIFO
 '   Returns:
     nr_samples := $00
 
-PUB GyroAxisEnabled(xyz_mask): curr_mask
-' Enable data output for Gyroscope - per axis
-'   Valid values: FALSE (0) or TRUE (1 or -1), for each axis
-'   Any other value polls the chip and returns the current setting
-    curr_mask := $00
-    case xyz_mask
-        %000..%111:
-        OTHER:
-            return
-
-PUB Interrupt{}: flag
+PUB Interrupt{}: flag 'TODO
 ' Flag indicating one or more interrupts asserted
 '   Returns TRUE if one or more interrupts asserted, FALSE if not
     flag := $00
 
-PUB IntMask(mask): curr_mask
+PUB IntMask(mask): curr_mask 'TODO
 
-PUB IntThresh(thresh): curr_thr
+PUB IntThresh(thresh): curr_thr 'TODO
 
-PUB MagBias(mxbias, mybias, mzbias, rw)
+PUB MagBias(mxbias, mybias, mzbias, rw) 'TODO
 ' Read or write/manually set Magnetometer calibration offset values
 '   Valid values:
 '       rw:
@@ -364,80 +359,80 @@ PUB MagBias(mxbias, mybias, mzbias, rw)
         OTHER:
             return
 
-PUB MagClearInt{} | tmp
+PUB MagClearInt{} | tmp 'TODO
 ' Clear out any interrupts set up on the Magnetometer and
 '   resets all Magnetometer interrupt registers to their default values
     tmp := $00
 
-PUB MagData(mx, my, mz) | tmp[2]
+PUB MagData(mx, my, mz) | tmp[2] 'TODO
 ' Read the Magnetometer output registers
     long[mx] := ~~tmp.word[0]
     long[my] := ~~tmp.word[1]
     long[mz] := ~~tmp.word[2]
     tmp := $00
 
-PUB MagDataOverrun{}: flag
+PUB MagDataOverrun{}: flag 'TODO
 ' Flag indicating magnetometer data has overrun
 '   Returns:
 '   NOTE: Overrun status indicates new data for axis has overwritten the previous data.
     flag := $00
 
-PUB MagDataRate(Hz): curr_rate
+PUB MagDataRate(Hz): curr_rate 'TODO
 ' Set Magnetometer Output Data Rate, in Hz
 '   Valid values:
 '   Any other value polls the chip and returns the current setting
     curr_rate := $00
 
-PUB MagDataReady{}: flag
+PUB MagDataReady{}: flag 'TODO
 ' Flag indicating new magnetometer data is available.
 '   Returns TRUE (-1) if data available, FALSE if not
     flag := $00
 
-PUB MagGauss(mx, my, mz) | tmp[3]
+PUB MagGauss(mx, my, mz) | tmp[3] 'TODO
 ' Read the Magnetometer output registers and scale the outputs to micro-Gauss (1_000_000 = 1.000000 Gs)
     magdata(@tmp[X_AXIS], @tmp[Y_AXIS], @tmp[Z_AXIS])
     long[mx] := tmp[X_AXIS] * _mres
     long[my] := tmp[Y_AXIS] * _mres
     long[mz] := tmp[Z_AXIS] * _mres
 
-PUB MagInt{}: intsrc
+PUB MagInt{}: intsrc 'TODO
 ' Magnetometer interrupt source(s)
 '   Returns: Interrupts that are currently asserted, as a bitmask
     intsrc := $00
 
-PUB MagIntsEnabled(enable_mask): curr_mask
+PUB MagIntsEnabled(enable_mask): curr_mask 'TODO
 ' Enable magnetometer interrupts, as a bitmask
 '   Valid values:
 '
 '   Any other value polls the chip and returns the current setting
     curr_mask := $00
 
-PUB MagIntThresh(level): curr_thr
+PUB MagIntThresh(level): curr_thr 'TODO
 ' Set magnetometer interrupt threshold
 '   Valid values:
 '   Any other value polls the chip and returns the current setting
     curr_thr := $00
 
-PUB MagOpMode(mode): curr_mode
+PUB MagOpMode(mode): curr_mode 'TODO
 ' Set magnetometer operating mode
 '   Valid values:
 '   Any other value polls the chip and returns the current setting
     curr_mode := $00
 
-PUB MagScale(scale): curr_scl
+PUB MagScale(scale): curr_scl 'TODO
 ' Set full scale of Magnetometer, in Gauss
 '   Valid values:
 '   Any other value polls the chip and returns the current setting
     curr_scl := $00
 
-PUB OpMode(mode): curr_mode
+PUB OpMode(mode): curr_mode 'TODO
 
-PUB Temperature{}: temp
+PUB Temperature{}: temp 'TODO
 ' Get temperature from chip
 '   Returns: Temperature in hundredths of a degree Celsius (1000 = 10.00 deg C)
     temp := $00
 
-PUB TempDataReady{}: flag
+PUB TempDataReady{}: flag 'TODO
 ' Flag indicating new temperature sensor data available
 '   Returns TRUE or FALSE
     flag := $00
