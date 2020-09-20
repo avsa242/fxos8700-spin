@@ -164,7 +164,9 @@ PUB AccelDataRate(Hz): curr_hz
 PUB AccelDataReady{}: flag
 ' Accelerometer sensor new data available
 '   Returns TRUE or FALSE
-    flag := $00
+    flag := 0
+    readreg(core#STATUS, 1, @flag)
+    return (flag & core#ZYXDR_BITS) == %111
 
 PUB AccelG(ax, ay, az) | tmpx, tmpy, tmpz
 ' Reads the Accelerometer output registers and scales the outputs to micro-g's (1_000_000 = 1.000000 g = 9.8 m/s/s)

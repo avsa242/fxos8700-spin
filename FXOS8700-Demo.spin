@@ -89,7 +89,7 @@ PUB Main{} | dispmode
 
 PUB AccelCalc{} | ax, ay, az
 
-'    repeat until imu.acceldataready{}
+    repeat until imu.acceldataready{}
     imu.accelg (@ax, @ay, @az)
     if imu.acceldataoverrun{}
         _overruns++
@@ -103,7 +103,7 @@ PUB AccelCalc{} | ax, ay, az
 
 PUB AccelRaw{} | ax, ay, az
 
-'    repeat until imu.acceldataready{}
+    repeat until imu.acceldataready{}
     imu.accelData (@ax, @ay, @az)
     if imu.acceldataoverrun{}
         _overruns++

@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 19, 2020
+    Updated Sep 20, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -24,6 +24,16 @@ CON
 
 ' Register definitions
     STATUS              = $00
+        ZYXOW           = 7
+        ZOW             = 6
+        YOW             = 5
+        XOW             = 4
+        ZYXDR           = 3
+        ZDR             = 2
+        YDR             = 1
+        XDR             = 0
+        ZYXOW_BITS      = %111
+        ZYXDR_BITS      = %111
 
     OUT_X_MSB           = $01
     OUT_X_LSB           = $02
