@@ -417,7 +417,8 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
             i2c.wr_block(@cmd_pkt, 2)               ' SL|W, reg_nr
             i2c.start{}                             ' Sr
             i2c.write(SLAVE_RD)                     ' SL|R
-            i2c.rd_block(ptr_buff, nr_bytes, true)  ' R 0..nr_bytes-1
+            repeat tmp from nr_bytes-1 to 0
+                byte[ptr_buff] := i2c.read(tmp == 0)
             i2c.stop{}                              ' P
         $00, $02, $04, $06, $09..$18, $1d..$32, $34, $36, $38, $3a, $3e..$78:
             cmd_pkt.byte[0] := SLAVE_WR

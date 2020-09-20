@@ -53,7 +53,7 @@ PUB Main{} | dispmode
 '    imu.magscale(1_3)
 '    imu.magdatarate(15)
 
-    imu.accelopmode(imu#ACTIVE)
+    imu.accelopmode(imu#MEASURE)
     ser.hidecursor{}
     dispmode := 0
 
@@ -103,7 +103,6 @@ PUB AccelCalc{} | ax, ay, az
 
 PUB AccelRaw{} | ax, ay, az
 
-    longfill(@ax, 0, 3)
 '    repeat until imu.acceldataready{}
     imu.accelData (@ax, @ay, @az)
     if imu.acceldataoverrun{}
