@@ -27,9 +27,15 @@ CON
     SL_ADDR_BITS= %11                               ' %00..11 ($1E, 1D, 1C, 1F)
 ' --
 
+    DATA_X_COL  = 20
+    DATA_Y_COL  = DATA_X_COL+12
+    DATA_Z_COL  = DATA_Y_COL+12
+    DATA_OVR_COL= DATA_Z_COL+12
+
 VAR
 
-    long _overruns
+    long _accel_overruns, _mag_overruns
+
 OBJ
 
     cfg     : "core.con.boardcfg.flip"                      ' Constants for clock setup, I/O pins, etc
@@ -78,7 +84,16 @@ PUB Main{} | dispmode
                     ser.newline{}
                 dispmode ^= 1
 
-        ser.position(0, 15)
+        ser.position (DATA_X_COL, 15)
+        ser.char("X")
+        ser.position (DATA_Y_COL, 15)
+        ser.char("Y")
+        ser.position (DATA_Z_COL, 15)
+        ser.char("Z")
+        ser.position (DATA_OVR_COL, 15)
+        ser.str(string("Overruns:"))
+        ser.newline{}
+
         case dispmode
             0:
                 accelraw{}
@@ -93,51 +108,83 @@ PUB AccelCalc{} | ax, ay, az
     repeat until imu.acceldataready{}
     imu.accelg (@ax, @ay, @az)
     if imu.acceldataoverrun{}
-        _overruns++
-    ser.str(string("accel micro-g: "))
-    ser.str(int.decpadded(ax, 10))
-    ser.str(int.decpadded(ay, 10))
-    ser.str(int.decpadded(az, 10))
-    ser.str(string("  Overruns: "))
-    ser.dec (_overruns)
+        _accel_overruns++
+    ser.str(string("accel g: "))
+
+    ser.positionx(DATA_X_COL)
+    decimaldot(ax, 1_000_000)
+
+    ser.positionx(DATA_Y_COL)
+    decimaldot(ay, 1_000_000)
+
+    ser.positionx(DATA_Z_COL)
+    decimaldot(az, 1_000_000)
+
+    ser.positionx(DATA_OVR_COL)
+    ser.dec (_accel_overruns)
     ser.newline{}
 
 PUB AccelRaw{} | ax, ay, az
 
     repeat until imu.acceldataready{}
-    imu.accelData (@ax, @ay, @az)
+    imu.acceldata(@ax, @ay, @az)
     if imu.acceldataoverrun{}
-        _overruns++
-    ser.str(string("Raw accel: "))
+        _accel_overruns++
+    ser.str(string("accel:   "))
 
-    ser.str(int.decpadded(ax, 7))
-    ser.str(int.decpadded(ay, 7))
-    ser.str(int.decpadded(az, 7))
-    ser.str(string("  Overruns: "))
-    ser.dec (_overruns)
+    ser.positionx(DATA_X_COL)
+    ser.str(int.decpadded(ax, 9))
+
+    ser.positionx(DATA_Y_COL)
+    ser.str(int.decpadded(ay, 9))
+
+    ser.positionx(DATA_Z_COL)
+    ser.str(int.decpadded(az, 9))
+
+    ser.positionx(DATA_OVR_COL)
+    ser.dec (_accel_overruns)
     ser.newline{}
 
 PUB MagCalc{} | mx, my, mz
 
 '    repeat until imu.magdataready{}
-    imu.maggauss (@mx, @my, @mz)
-    ser.str(string("Mag Gauss:   "))
-    ser.str(int.decpadded(mx, 10))
-    ser.str(int.decpadded(my, 10))
-    ser.str(int.decpadded(mz, 10))
-    ser.clearline{}
+    imu.maggauss(@mx, @my, @mz)
+    if imu.magdataoverrun{}
+        _mag_overruns++
+    ser.str(string("mag Gs: "))
+
+    ser.positionx(DATA_X_COL)
+    decimaldot(mx, 1_000_000)
+
+    ser.positionx(DATA_Y_COL)
+    decimaldot(my, 1_000_000)
+
+    ser.positionx(DATA_Z_COL)
+    decimaldot(mz, 1_000_000)
+
+    ser.positionx(DATA_OVR_COL)
+    ser.dec (_mag_overruns)
     ser.newline{}
 
 PUB MagRaw{} | mx, my, mz
 
 '    repeat until imu.magdataready{}
-    imu.magdata (@mx, @my, @mz)
-    ser.str(string("Mag raw:  "))
+    imu.magdata(@mx, @my, @mz)
+    if imu.magdataoverrun{}
+        _mag_overruns++
+    ser.str(string("mag:   "))
 
-    ser.str(int.decpadded(mx, 7))
-    ser.str(int.decpadded(my, 7))
-    ser.str(int.decpadded(mz, 7))
-    ser.clearline{}
+    ser.positionx(DATA_X_COL)
+    ser.str(int.decpadded(mx, 9))
+
+    ser.positionx(DATA_Y_COL)
+    ser.str(int.decpadded(my, 9))
+
+    ser.positionx(DATA_Z_COL)
+    ser.str(int.decpadded(mz, 9))
+
+    ser.positionx(DATA_OVR_COL)
+    ser.dec (_mag_overruns)
     ser.newline{}
 
 PUB Calibrate{}
@@ -182,6 +229,30 @@ PUB DisplaySettings{}
 '    ser.str(string("MagOpMode: "))
 '    ser.dec(imu.magopmode(-2))
 '    ser.newline{}
+
+PUB DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
+' Display a scaled up number in its natural form - scale it back down by divisor
+    whole := scaled / divisor
+    tmp := divisor
+    places := 0
+    part := 0
+    sign := 0
+    if scaled < 0
+        sign := "-"
+    else
+        sign := " "
+
+    repeat
+        tmp /= 10
+        places++
+    until tmp == 1
+    scaled //= divisor
+    part := int.DecZeroed(||scaled, places)
+
+    ser.char(sign)
+    ser.Dec(||whole)
+    ser.Char (".")
+    ser.Str (part)
 
 PUB Setup{}
 
