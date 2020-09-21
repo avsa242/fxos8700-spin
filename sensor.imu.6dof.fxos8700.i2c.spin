@@ -301,10 +301,14 @@ PUB FIFOEnabled(enabled): curr_setting
         other:
             return fifomode(-2)
 
-PUB FIFOFull: flag 'TODO
-' FIFO Threshold status
-'   Returns: FALSE (0): lower than threshold level, TRUE(-1): at or higher than threshold level
+PUB FIFOFull{}: flag
+' Flag indicating FIFO full/overflowed
+'   Returns:
+'       FALSE (0): FIFO not full
+'       TRUE(-1): FIFO full/overflowed
     flag := $00
+    readreg(core#F_STATUS, 1, @flag)
+    return ((flag >> core#F_OVF) & 1) == 1
 
 PUB FIFOMode(mode): curr_mode | fmode_bypass
 ' Set FIFO behavior
