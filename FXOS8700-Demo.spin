@@ -50,10 +50,11 @@ PUB Main{} | dispmode
     setup{}
     imu.accelopmode(imu#STANDBY)
 '    imu.acceladcres(12)                                     ' 8, 10, 12 (low-power, normal, high-res, resp.)
-    imu.accelscale(2)                                       ' 2, 4, 8, 16 (g's)
+    imu.accelscale(2)                                       ' 2, 4, 8 (g's)
     imu.acceldatarate(50)                                   ' 1, 6, 12, 50, 100, 200, 400, 800
 '    imu.accelaxisenabled(%111)                              ' 0 or 1 for each bit (%xyz)
     imu.fifomode(imu#BYPASS)                                ' imu#BYPASS, imu#FIFO, imu#STREAM, imu#TRIGGER
+    imu.fifothreshold(0)                                    ' 0..32
 '    imu.intthresh(1_000000)                                 ' 0..16_000000 (micro-g's, i.e., 0..16g)
 '    imu.intmask(%100000)                                    ' Bits 5..0: Zhigh event | Zlow event | Yh|Yl|Xh|Xl
 
@@ -212,8 +213,11 @@ PUB DisplaySettings{}
     ser.dec(imu.acceldatarate(-2))
     ser.newline{}
     ser.str(string("FIFOMode: "))
-    ser.str(lookupz(imu.fifomode(-2): string("BYPASS"), string("STREAM"), string("FIFO"), string("TRIGGER")))
-'    ser.newline{}
+    ser.strln(lookupz(imu.fifomode(-2): string("BYPASS"), string("STREAM"), string("FIFO"), string("TRIGGER")))
+
+    ser.str(string("FIFOThreshold: "))
+    ser.dec(imu.fifothreshold(-2))
+    ser.newline{}
 '    ser.str(string("IntThresh: "))
 '    ser.dec(imu.intthresh(-2))
 '    ser.newline{}
