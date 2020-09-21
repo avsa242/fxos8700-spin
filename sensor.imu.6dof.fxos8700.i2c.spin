@@ -215,7 +215,7 @@ PUB AccelOpMode(mode): curr_mode
     mode := ((curr_mode & core#ACTIVE_MASK) | mode) & core#CTRL_REG1_MASK
     writereg(core#CTRL_REG1, 1, @mode)
 
-PUB AccelScale(g): curr_scale
+PUB AccelScale(g): curr_scale | opmode_orig
 ' Sets the full-scale range of the Accelerometer, in g's
 '   Valid values: 2, 4, 8
 '   Any other value polls the chip and returns the current setting
@@ -230,7 +230,10 @@ PUB AccelScale(g): curr_scale
             return lookupz(curr_scale: 2, 4, 8)
 
     g := (curr_scale & core#FS_MASK) | g
+    opmode_orig := accelopmode(-2)
+    accelopmode(STANDBY)
     writereg(core#XYZ_DATA_CFG, 1, @g)
+    accelopmode(opmode_orig)
 
 PUB CalibrateAccel{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples 'TODO
 ' Calibrate the accelerometer
