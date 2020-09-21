@@ -161,7 +161,7 @@ PUB AccelDataOverrun{}: flag
     readreg(core#STATUS, 1, @flag)
     return ((flag >> 6) & core#ZYXOW_BITS) == %111
 
-PUB AccelDataRate(Hz): curr_hz
+PUB AccelDataRate(Hz): curr_hz | opmode_orig
 ' Set accelerometer output data rate, in Hz
 '   Valid values: 1(.5625), 6(.25), 12(.5), 50, 100, 200, 400, 800
 '   Any other value polls the chip and returns the current setting
@@ -175,7 +175,10 @@ PUB AccelDataRate(Hz): curr_hz
             return lookupz(curr_hz: 800, 400, 200, 100, 50, 12, 6, 1)
 
     Hz := ((curr_hz & core#DR_MASK) | Hz) & core#CTRL_REG1_MASK
+    opmode_orig := accelopmode(-2)
+    accelopmode(STANDBY)
     writereg(core#CTRL_REG1, 1, @Hz)
+    accelopmode(opmode_orig)
 
 PUB AccelDataReady{}: flag
 ' Flag indicating new accelerometer data available
