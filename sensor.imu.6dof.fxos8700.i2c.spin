@@ -109,36 +109,31 @@ PUB AccelAxisEnabled(xyz_mask): curr_mask
 ' dummy method
     curr_mask := $00
 
-PUB AccelBias(axbias, aybias, azbias, rw) ' TODO
+PUB AccelBias(bias_x, bias_y, bias_z, rw) | tmp, opmode_orig
 ' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
-'       rw:
-'           R (0), W (1)
-'       axbias, aybias, azbias:
-'           -32768..32767
-'   NOTE: When rw is set to READ, axbias, aybias and azbias must be addresses of respective variables to hold the returned
-'       calibration offset values.
+'       When rw == W (1, write)
+'           ptr_x, ptr_y, ptr_z: -128..127
+'       When rw == R (0, read)
+'           ptr_x, ptr_y, ptr_z:
+'               Pointers to variables to hold current settings for respective
+'               axes
+'   NOTE: When writing new offsets, any values outside of the range -128..127
+'       will be clamped (e.g., calling with 131 will actually set 127)
     case rw
         R:
-            long[axbias] := _abiasraw[X_AXIS]
-            long[aybias] := _abiasraw[Y_AXIS]
-            long[azbias] := _abiasraw[Z_AXIS]
-
+            readreg(core#OFF_X, 3, @tmp)
+            long[bias_x] := ~tmp.byte[0]
+            long[bias_y] := ~tmp.byte[1]
+            long[bias_z] := ~tmp.byte[2]
         W:
-            case axbias
-                -32768..32767:
-                    _abiasraw[X_AXIS] := axbias
-                OTHER:
-
-            case aybias
-                -32768..32767:
-                    _abiasraw[Y_AXIS] := aybias
-                OTHER:
-
-            case azbias
-                -32768..32767:
-                    _abiasraw[Z_AXIS] := azbias
-                OTHER:
+            tmp.byte[0] := bias_x := -128 #> bias_x <# 127
+            tmp.byte[1] := bias_y := -128 #> bias_y <# 127
+            tmp.byte[2] := bias_z := -128 #> bias_z <# 127
+            opmode_orig := accelopmode(-2)
+            accelopmode(STANDBY)
+            writereg(core#OFF_X, 3, @tmp)
+            accelopmode(opmode_orig)
 
 PUB AccelClearInt{} | tmp   ' TODO
 ' Clears out any interrupts set up on the Accelerometer

@@ -51,6 +51,7 @@ PUB Main{} | dispmode
 '    imu.acceladcres(12)                                     ' 8, 10, 12 (low-power, normal, high-res, resp.)
     imu.accelscale(2)                                       ' 2, 4, 8 (g's)
     imu.acceldatarate(50)                                   ' 1, 6, 12, 50, 100, 200, 400, 800
+    imu.accelbias(0, 0, 0, 1)
 '    imu.accelaxisenabled(%111)                              ' 0 or 1 for each bit (%xyz)
     imu.fifomode(imu#BYPASS)                                ' imu#BYPASS, imu#FIFO, imu#STREAM, imu#TRIGGER
     imu.fifothreshold(0)                                    ' 0..32
@@ -194,7 +195,7 @@ PUB Calibrate{}
     ser.position(0, 12)
     ser.str(string("              "))
 
-PUB DisplaySettings{}
+PUB DisplaySettings{} | axo, ayo, azo
 
     ser.position(0, 3)                                      ' Read back the settings from above
     ser.str(string("AccelOpMode: "))
@@ -206,6 +207,15 @@ PUB DisplaySettings{}
 '    ser.str(string("AccelADCRes: "))
 '    ser.dec(imu.acceladcres(-2))
 '    ser.newline{}
+    imu.accelbias(@axo, @ayo, @azo, 0)
+    ser.str(string("AccelBias: "))
+    ser.dec(axo)
+    ser.str(string("(x), "))
+    ser.dec(ayo)
+    ser.str(string("(y), "))
+    ser.dec(azo)
+    ser.str(string("(z)"))
+    ser.newline{}
     ser.str(string("AccelDataRate: "))
     ser.dec(imu.acceldatarate(-2))
     ser.newline{}
