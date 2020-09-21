@@ -5,7 +5,7 @@
     Description: Driver for the FXOS8700 6DoF IMU
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 19, 2020
+    Updated Sep 21, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -49,7 +49,9 @@ CON
 
 ' FIFO modes
     BYPASS                  = 0
-    FIFO                    = 1
+    STREAM                  = 1
+    FIFO                    = 2
+    TRIGGER                 = 3
 
 ' Operating modes
     STANDBY                 = 0
@@ -299,11 +301,30 @@ PUB FIFOFull: flag 'TODO
 '   Returns: FALSE (0): lower than threshold level, TRUE(-1): at or higher than threshold level
     flag := $00
 
-PUB FIFOMode(mode): curr_mode 'TODO
+PUB FIFOMode(mode): curr_mode | fmode_bypass
 ' Set FIFO behavior
 '   Valid values:
+'       BYPASS (0): FIFO bypassed/disabled
+'       STREAM (1): FIFO enabled, circular buffer
+'       FIFO (2): FIFO enabled, stop sampling when FIFO full
+'       TRIGGER (3): FIFO enabled, circular buffer. Once triggered, FIFO will
+'           continue to sample until full. The newest data will be discarded.
 '   Any other value polls the chip and returns the current setting
     curr_mode := $00
+    readreg(core#F_SETUP, 1, @curr_mode)
+    case mode
+        BYPASS, STREAM, FIFO, TRIGGER:
+            mode := mode << core#F_MODE
+        other:
+            return ((curr_mode >> core#F_MODE) & core#F_MODE_BITS)
+
+    fmode_bypass := (curr_mode & core#F_MODE_MASK)
+    mode := (fmode_bypass | mode) & core#F_SETUP_MASK
+' In order to switch between _active_ FIFO modes, it must first be disabled:
+    if ((curr_mode >> core#F_MODE) & core#F_MODE_BITS) <> BYPASS
+        writereg(core#F_SETUP, 1, @fmode_bypass)
+
+    writereg(core#F_SETUP, 1, @mode)
 
 PUB FIFOThreshold(level): curr_lvl 'TODO
 ' Set FIFO threshold level

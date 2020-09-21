@@ -1,11 +1,11 @@
 {
     --------------------------------------------
-    Filename:
-    Author:
-    Description:
+    Filename: FXOS8700-Demo.spin
+    Author: Jesse Burt
+    Description: Demo of the FXOS8700 driver
     Copyright (c) 2020
-    Started Month Day, Year
-    Updated Month Day, Year
+    Started Sep 19, 2020
+    Updated Sep 21, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -53,7 +53,7 @@ PUB Main{} | dispmode
     imu.accelscale(2)                                       ' 2, 4, 8, 16 (g's)
     imu.acceldatarate(50)                                   ' 1, 6, 12, 50, 100, 200, 400, 800
 '    imu.accelaxisenabled(%111)                              ' 0 or 1 for each bit (%xyz)
-'    imu.fifomode(imu#BYPASS)                                ' imu#BYPASS, imu#FIFO, imu#STREAM, imu#TRIGGER
+    imu.fifomode(imu#BYPASS)                                ' imu#BYPASS, imu#FIFO, imu#STREAM, imu#TRIGGER
 '    imu.intthresh(1_000000)                                 ' 0..16_000000 (micro-g's, i.e., 0..16g)
 '    imu.intmask(%100000)                                    ' Bits 5..0: Zhigh event | Zlow event | Yh|Yl|Xh|Xl
 
@@ -211,8 +211,8 @@ PUB DisplaySettings{}
     ser.str(string("AccelDataRate: "))
     ser.dec(imu.acceldatarate(-2))
     ser.newline{}
-'    ser.str(string("FIFOMode: "))
-'    ser.str(lookupz(imu.fifomode(-2): string("BYPASS"), string("FIFO"), string("STREAM"), string("STREAM2FIFO")))
+    ser.str(string("FIFOMode: "))
+    ser.str(lookupz(imu.fifomode(-2): string("BYPASS"), string("STREAM"), string("FIFO"), string("TRIGGER")))
 '    ser.newline{}
 '    ser.str(string("IntThresh: "))
 '    ser.dec(imu.intthresh(-2))

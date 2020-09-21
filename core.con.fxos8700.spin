@@ -53,6 +53,14 @@ CON
 '$07, $08 RESERVED
 
     F_SETUP             = $09
+    F_SETUP_MASK        = $FF
+        F_MODE          = 6
+        F_WMRK          = 0
+        F_MODE_BITS     = %11
+        F_WMRK_BITS     = %111111
+        F_MODE_MASK     = (F_MODE_BITS << F_MODE) ^ F_SETUP_MASK
+        F_WMRK_MASK     = F_WMRK_BITS ^ F_SETUP_MASK
+
     TRIG_CFG            = $0A
     SYSMOD_REG          = $0B
     SYSMOD_REGMASK      = $FF
