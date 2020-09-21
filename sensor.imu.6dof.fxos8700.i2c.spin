@@ -372,7 +372,28 @@ PUB Interrupt{}: flag
     flag := $00
     readreg(core#INT_SOURCE, 1, @flag)
 
-PUB IntMask(mask): curr_mask 'TODO
+PUB IntMask(mask): curr_mask | opmode_orig
+' Set interrupt mask
+'   Valid values:
+'       Bits: [7..0]
+'           7: Auto-sleep/wake interrupt
+'           6: FIFO interrupt
+'           5: Transient interrupt
+'           4: Orientation (portrait/landscape) interrupt
+'           3: Pulse detection interrupt
+'           2: Freefall/motion interrupt
+'           1: Acceleration vector-magnitude interrupt
+'           0: Data-ready interrupt
+'   Any other value polls the chip and returns the current setting
+    case mask
+        0..%11111111:
+            opmode_orig := accelopmode(-2)
+            accelopmode(STANDBY)
+            writereg(core#CTRL_REG4, 1, @mask)
+            accelopmode(opmode_orig)
+        other:
+            curr_mask := 0
+            readreg(core#CTRL_REG4, 1, @curr_mask)
 
 PUB IntThresh(thresh): curr_thr 'TODO
 

@@ -55,7 +55,7 @@ PUB Main{} | dispmode
     imu.fifomode(imu#BYPASS)                                ' imu#BYPASS, imu#FIFO, imu#STREAM, imu#TRIGGER
     imu.fifothreshold(0)                                    ' 0..32
 '    imu.intthresh(1_000000)                                 ' 0..16_000000 (micro-g's, i.e., 0..16g)
-'    imu.intmask(%100000)                                    ' Bits 5..0: Zhigh event | Zlow event | Yh|Yl|Xh|Xl
+    imu.intmask(%00000000)                                  ' Bits 7..0
 
 '    imu.magscale(1_3)
 '    imu.magdatarate(15)
@@ -92,7 +92,6 @@ PUB Main{} | dispmode
         ser.position (DATA_OVR_COL, 15)
         ser.str(string("Overruns:"))
         ser.newline{}
-
         case dispmode
             0:
                 accelraw{}
@@ -219,9 +218,9 @@ PUB DisplaySettings{}
 '    ser.str(string("IntThresh: "))
 '    ser.dec(imu.intthresh(-2))
 '    ser.newline{}
-'    ser.str(string("IntMask: "))
-'    ser.bin(imu.intmask(-2), 6)
-'    ser.newline{}
+    ser.str(string("IntMask: "))
+    ser.bin(imu.intmask(-2), 8)
+    ser.newline{}
 '    ser.str(string("MagScale: "))                         '
 '    ser.dec(imu.magscale(-2))
 '    ser.newline{}
