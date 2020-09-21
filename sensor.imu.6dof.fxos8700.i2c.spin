@@ -341,7 +341,7 @@ PUB FIFOMode(mode): curr_mode | fmode_bypass
 
     writereg(core#F_SETUP, 1, @mode)
 
-PUB FIFOThreshold(level): curr_lvl
+PUB FIFOThreshold(level): curr_lvl | opmode_orig
 ' Set FIFO watermark/threshold level
 '   Valid values:
 '   Any other value polls the chip and returns the current setting
@@ -353,7 +353,11 @@ PUB FIFOThreshold(level): curr_lvl
             return (curr_lvl & core#F_WMRK_BITS)
 
     level := ((curr_lvl & core#F_WMRK_MASK) | level) & core#F_SETUP_MASK
+
+    opmode_orig := accelopmode(-2)
+    accelopmode(STANDBY)
     writereg(core#F_SETUP, 1, @level)
+    accelopmode(opmode_orig)
 
 PUB FIFOUnreadSamples: nr_samples
 ' Number of unread samples stored in FIFO

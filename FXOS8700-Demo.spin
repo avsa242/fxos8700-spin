@@ -48,7 +48,6 @@ OBJ
 PUB Main{} | dispmode
 
     setup{}
-    imu.accelopmode(imu#STANDBY)
 '    imu.acceladcres(12)                                     ' 8, 10, 12 (low-power, normal, high-res, resp.)
     imu.accelscale(2)                                       ' 2, 4, 8 (g's)
     imu.acceldatarate(50)                                   ' 1, 6, 12, 50, 100, 200, 400, 800
@@ -61,7 +60,6 @@ PUB Main{} | dispmode
 '    imu.magscale(1_3)
 '    imu.magdatarate(15)
 
-    imu.accelopmode(imu#MEASURE)
     ser.hidecursor{}
     dispmode := 0
 
