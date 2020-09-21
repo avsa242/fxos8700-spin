@@ -290,11 +290,16 @@ PUB DeviceID{}: id
 '   Returns: $C7
     readreg(core#WHO_AM_I, 1, @id)
 
-PUB FIFOEnabled(enabled): curr_setting 'TODO
+PUB FIFOEnabled(enabled): curr_setting
 ' Enable FIFO memory
 '   Valid values: FALSE (0), TRUE(1 or -1)
 '   Any other value polls the chip and returns the current setting
     curr_setting := $00
+    case ||(enabled)
+        0, 1:
+            fifomode(||(enabled))
+        other:
+            return fifomode(-2)
 
 PUB FIFOFull: flag 'TODO
 ' FIFO Threshold status
