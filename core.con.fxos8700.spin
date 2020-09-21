@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 20, 2020
+    Updated Sep 21, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -18,17 +18,17 @@ CON
 ' Slave address options
 '   Unfortunately, these aren't mapped logically in the chip, so
 '   here are some constants to use, instead
-    SLAVE_ADDR          = $1E << 1                      ' %00
-    SLAVE_ADDR_1E       = SLAVE_ADDR                    ' %00 (default)
-    SLAVE_ADDR_1D       = $1D << 1                      ' %01
-    SLAVE_ADDR_1C       = $1C << 1                      ' %10
-    SLAVE_ADDR_1F       = $1F << 1                      ' %11
+    SLAVE_ADDR          = $1E << 1                  ' %00
+    SLAVE_ADDR_1E       = SLAVE_ADDR                ' %00 (default)
+    SLAVE_ADDR_1D       = $1D << 1                  ' %01
+    SLAVE_ADDR_1C       = $1C << 1                  ' %10
+    SLAVE_ADDR_1F       = $1F << 1                  ' %11
 
 ' SPI R/W bit (7)
     R                   = 0
     W                   = 1 << 7
 
-    TPOR                = 1000                          ' uSec
+    TPOR                = 1000                      ' uSec
 
 ' Register definitions
     STATUS              = $00
@@ -42,6 +42,12 @@ CON
         XDR             = 0
         ZYXOW_BITS      = %111
         ZYXDR_BITS      = %111
+
+    F_STATUS            = $00                       ' Same reg as STATUS above
+        F_OVF           = 7                         ' This context applies only
+        F_WMRK_FLAG     = 6                         '   if operating in a FIFO
+        F_CNT           = 0                         '   mode
+        F_CNT_BITS      = %111111
 
     OUT_X_MSB           = $01
     OUT_X_LSB           = $02

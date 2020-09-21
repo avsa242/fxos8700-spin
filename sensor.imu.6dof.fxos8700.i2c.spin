@@ -337,10 +337,12 @@ PUB FIFOThreshold(level): curr_lvl 'TODO
 '   Any other value polls the chip and returns the current setting
     curr_lvl := $00
 
-PUB FIFOUnreadSamples: nr_samples 'TODO
+PUB FIFOUnreadSamples: nr_samples
 ' Number of unread samples stored in FIFO
-'   Returns:
+'   Returns: 0..32
     nr_samples := $00
+    readreg(core#F_STATUS, 1, @nr_samples)
+    return (nr_samples & core#F_CNT_BITS)
 
 PUB Interrupt{}: flag 'TODO
 ' Flag indicating one or more interrupts asserted
