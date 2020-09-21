@@ -356,10 +356,11 @@ PUB FIFOUnreadSamples: nr_samples
     readreg(core#F_STATUS, 1, @nr_samples)
     return (nr_samples & core#F_CNT_BITS)
 
-PUB Interrupt{}: flag 'TODO
+PUB Interrupt{}: flag
 ' Flag indicating one or more interrupts asserted
-'   Returns TRUE if one or more interrupts asserted, FALSE if not
+'   Returns TRUE (-1) if one or more interrupts asserted, FALSE (0) if not
     flag := $00
+    readreg(core#INT_SOURCE, 1, @flag)
 
 PUB IntMask(mask): curr_mask 'TODO
 
