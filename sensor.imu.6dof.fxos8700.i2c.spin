@@ -5,7 +5,7 @@
     Description: Driver for the FXOS8700 6DoF IMU
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 21, 2020
+    Updated Sep 22, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -53,9 +53,14 @@ CON
     FIFO                    = 2
     TRIGGER                 = 3
 
-' Operating modes
+' Accel Operating modes
     STANDBY                 = 0
     MEASURE                 = 1
+
+' Operating modes
+    ACCEL                   = 0
+    MAG                     = 1
+    BOTH                    = 3
 
 OBJ
 
@@ -554,7 +559,22 @@ PUB MagScale(scale): curr_scl 'TODO
 '   Any other value polls the chip and returns the current setting
     curr_scl := $00
 
-PUB OpMode(mode): curr_mode 'TODO
+PUB OpMode(mode): curr_mode
+' Set operating mode
+'   Valid values:
+'       ACCEL (0): Accelerometer only
+'       MAG (1): Magnetometer only
+'       BOTH (3): Both sensors active
+'   Any other value polls the chip and returns the current setting
+    curr_mode := 0
+    readreg(core#M_CTRL_REG1, 1, @curr_mode)
+    case mode
+        ACCEL, MAG, BOTH:
+        other:
+            return (curr_mode & core#M_HMS_BITS)
+
+    mode := ((curr_mode & core#M_HMS_MASK) | mode) & core#M_CTRL_REG1_MASK
+    writereg(core#M_CTRL_REG1, 1, @mode)
 
 PUB Temperature{}: temp 'TODO
 ' Get temperature from chip

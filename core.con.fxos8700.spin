@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 21, 2020
+    Updated Sep 22, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -182,7 +182,22 @@ CON
     M_THS_Z_MSB         = $58
     M_THS_Z_LSB         = $59
     M_THS_COUNT         = $5A
+
     M_CTRL_REG1         = $5B
+    M_CTRL_REG1_MASK    = $FF
+        M_ACAL          = 7
+        M_RST           = 6
+        M_OST           = 5
+        M_OS            = 2
+        M_HMS           = 0
+        M_OS_BITS       = %111
+        M_HMS_BITS      = %11
+        M_ACAL_MASK     = (1 << M_ACAL) ^ M_CTRL_REG1_MASK
+        M_RST_MASK      = (1 << M_RST) ^ M_CTRL_REG1_MASK
+        M_OST_MASK      = (1 << M_OST) ^ M_CTRL_REG1_MASK
+        M_OS_MASK       = (M_OS_BITS << M_OS) ^ M_CTRL_REG1_MASK
+        M_HMS_MASK      = M_HMS_BITS ^ M_CTRL_REG1_MASK
+
     M_CTRL_REG2         = $5C
     M_CTRL_REG3         = $5D
     M_INT_SRC           = $5E

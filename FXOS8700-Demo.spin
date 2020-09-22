@@ -5,7 +5,7 @@
     Description: Demo of the FXOS8700 driver
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 21, 2020
+    Updated Sep 22, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -49,6 +49,7 @@ PUB Main{} | dispmode
 
     setup{}
 '    imu.acceladcres(12)                                     ' 8, 10, 12 (low-power, normal, high-res, resp.)
+    imu.opmode(imu#BOTH)
     imu.accellowpassfilter(false)
     imu.accelscale(2)                                       ' 2, 4, 8 (g's)
     imu.acceldatarate(50)                                   ' 1, 6, 12, 50, 100, 200, 400, 800
