@@ -107,7 +107,6 @@ PUB AccelADCRes(bits): curr_res
 
 PUB AccelAxisEnabled(xyz_mask): curr_mask
 ' dummy method
-    curr_mask := $00
 
 PUB AccelBias(bias_x, bias_y, bias_z, rw) | tmp, opmode_orig
 ' Read or write/manually set accelerometer calibration offset values
@@ -361,11 +360,50 @@ PUB FIFOUnreadSamples: nr_samples
     readreg(core#F_STATUS, 1, @nr_samples)
     return (nr_samples & core#F_CNT_BITS)
 
-PUB Interrupt{}: flag
-' Flag indicating one or more interrupts asserted
-'   Returns TRUE (-1) if one or more interrupts asserted, FALSE (0) if not
-    flag := $00
-    readreg(core#INT_SOURCE, 1, @flag)
+PUB IntClear(clear_mask) | i, reg_nr
+' Clear interrupts, per clear_mask
+'   Valid values:
+'       Bits: [5..0]: 1: clear interrupt, 0: don't clear interrupt
+'           5: Auto-sleep/wake interrupt
+'           4: FIFO interrupt
+'           3: Transient interrupt
+'           2: Orientation (portrait/landscape) interrupt
+'           1: Pulse detection interrupt
+'           0: Freefall/motion interrupt
+'   NOTE: Acceleration vector-magnitude interrupt is cleared by
+'       reading Interrupt()
+'   NOTE: Data-ready interrupt is cleared by reading the acceleration data
+'       and/or magnetometer data, as applicable
+    case clear_mask
+        0..%111111:
+            repeat i from 5 to 0                    ' Each int is cleared by
+                if clear_mask & (1 << (i+2))        ' reading a different reg
+                    reg_nr := lookdownz(i: core#A_FFMT_SRC, core#PULSE_SRC, {
+                    }core#PL_STATUS, core#TRANSIENT_SRC, core#F_STATUS, {
+                    }core#SYSMOD)                   ' Sweep through all, and
+                    readreg(reg_nr, 1, @result)     ' clear those with bits
+                                                    ' marked '1'
+        other:
+            return
+
+PUB Interrupt{}: int_src
+' Indicate interrupt state
+'   Returns:
+'       Bits: [7..0]: 1: interrupt asserted, 0: interrupt inactive
+'           7: Auto-sleep/wake interrupt
+'           6: FIFO interrupt
+'           5: Transient interrupt
+'           4: Orientation (portrait/landscape) interrupt
+'           3: Pulse detection interrupt
+'           2: Freefall/motion interrupt
+'           1: Acceleration vector-magnitude interrupt
+'           0: Data-ready interrupt
+'   NOTE: Bit 1/Acceleration vector-magnitude interrupt is cleared by
+'       reading this flag
+'   NOTE: Bit 0/Data-ready interrupt is cleared by reading the acceleration
+'       data and/or magnetometer data, as applicable
+    int_src := $00
+    readreg(core#INT_SOURCE, 1, @int_src)
 
 PUB IntMask(mask): curr_mask | opmode_orig
 ' Set interrupt mask
