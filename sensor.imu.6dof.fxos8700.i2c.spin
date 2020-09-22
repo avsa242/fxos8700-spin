@@ -193,8 +193,32 @@ PUB AccelInt{}: flag 'TODO
 '   Returns TRUE if interrupt asserted, FALSE if not
     flag := $00
 
-PUB AccelLowPassFilter(Hz): curr_rate
-' dummy method
+PUB AccelLowPassFilter(Hz): curr_rate | opmode_orig
+' Enable accelerometer data low-pass filter
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+'   NOTE: This option simply enables a reduced noise mode - it doesn't
+'       provide a LPF cutoff frequency setting, as in other IMUs
+'   NOTE: This option cannot be used in 8g scale. If the accelerometer
+'       scale is currently set to 8g, enabling this filter will be ignored
+    curr_rate := 0
+    readreg(core#CTRL_REG1, 1, @curr_rate)
+    case ||(Hz)
+        0:
+            Hz := (curr_rate & core#LNOISE_MASK)
+        1:
+            case accelscale(-2)
+                2, 4:
+                    Hz := (curr_rate | (1 << core#LNOISE))
+                8:
+                    return FALSE
+        other:
+            return ((curr_rate >> core#LNOISE) & %1) == 1
+
+    opmode_orig := accelopmode(-2)
+    accelopmode(STANDBY)
+    writereg(core#CTRL_REG1, 1, @Hz)
+    accelopmode(opmode_orig)
 
 PUB AccelOpMode(mode): curr_mode
 ' Set accelerometer operating mode

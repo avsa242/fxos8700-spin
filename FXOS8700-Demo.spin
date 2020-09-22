@@ -49,6 +49,7 @@ PUB Main{} | dispmode
 
     setup{}
 '    imu.acceladcres(12)                                     ' 8, 10, 12 (low-power, normal, high-res, resp.)
+    imu.accellowpassfilter(false)
     imu.accelscale(2)                                       ' 2, 4, 8 (g's)
     imu.acceldatarate(50)                                   ' 1, 6, 12, 50, 100, 200, 400, 800
     imu.accelbias(0, 0, 0, 1)
