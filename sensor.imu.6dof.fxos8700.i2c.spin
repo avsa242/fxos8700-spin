@@ -498,11 +498,12 @@ PUB MagClearInt{} | tmp 'TODO
 '   resets all Magnetometer interrupt registers to their default values
     tmp := $00
 
-PUB MagData(mx, my, mz) | tmp[2] 'TODO
+PUB MagData(mx, my, mz) | tmp[2]
 ' Read the Magnetometer output registers
-    long[mx] := ~~tmp.word[0]
+    readreg(core#M_OUT_X_MSB, 6, @tmp)
+    long[mx] := ~~tmp.word[2]
     long[my] := ~~tmp.word[1]
-    long[mz] := ~~tmp.word[2]
+    long[mz] := ~~tmp.word[0]
     tmp := $00
 
 PUB MagDataOverrun{}: flag 'TODO
