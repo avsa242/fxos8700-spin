@@ -54,13 +54,14 @@ PUB Main{} | dispmode
     imu.accellowpassfilter(false)
     imu.accelscale(2)                                       ' 2, 4, 8 (g's)
     imu.acceldatarate(50)                                   ' 1, 6, 12, 50, 100, 200, 400, 800
-    imu.accelbias(0, 0, 0, 1)
+    imu.accelbias(0, 0, 0, 1)                               ' x, y, z: -128..127, rw: 0 (R), 1 (W)
 '    imu.accelaxisenabled(%111)                              ' 0 or 1 for each bit (%xyz)
     imu.fifomode(imu#BYPASS)                                ' imu#BYPASS, imu#FIFO, imu#STREAM, imu#TRIGGER
     imu.fifothreshold(0)                                    ' 0..32
 '    imu.intthresh(1_000000)                                 ' 0..16_000000 (micro-g's, i.e., 0..16g)
     imu.intmask(%00000000)                                  ' Bits 7..0
 
+    imu.magbias(0, 0, 0, 1)                                 ' x, y, z: -16384..16383, rw: 0 (R), 1 (W)
 '    imu.magscale(1_3)
 '    imu.magdatarate(15)
 
@@ -198,7 +199,7 @@ PUB Calibrate{}
     ser.position(0, 12)
     ser.str(string("              "))
 
-PUB DisplaySettings{} | axo, ayo, azo
+PUB DisplaySettings{} | axo, ayo, azo, mxo, myo, mzo
 
     ser.position(0, 3)                                      ' Read back the settings from above
     ser.str(string("AccelOpMode: "))
@@ -243,6 +244,15 @@ PUB DisplaySettings{} | axo, ayo, azo
 '    ser.str(string("MagOpMode: "))
 '    ser.dec(imu.magopmode(-2))
 '    ser.newline{}
+    imu.magbias(@mxo, @myo, @mzo, 0)
+    ser.str(string("MagBias: "))
+    ser.dec(mxo)
+    ser.str(string("(x), "))
+    ser.dec(myo)
+    ser.str(string("(y), "))
+    ser.dec(mzo)
+    ser.str(string("(z)"))
+    ser.newline{}
 
 PUB DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
 ' Display a scaled up number in its natural form - scale it back down by divisor

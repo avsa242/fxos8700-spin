@@ -463,39 +463,29 @@ PUB IntMask(mask): curr_mask | opmode_orig
 
 PUB IntThresh(thresh): curr_thr 'TODO
 
-PUB MagBias(mxbias, mybias, mzbias, rw) 'TODO
-' Read or write/manually set Magnetometer calibration offset values
+PUB MagBias(bias_x, bias_y, bias_z, rw) | tmp[2]
+' Read or write/manually set magnetometer calibration offset values
 '   Valid values:
-'       rw:
-'           R (0), W (1)
-'       mxbias, mybias, mzbias:
-'           -32768..32767
-'   NOTE: When rw is set to READ, mxbias, mybias and mzbias must be addresses of respective variables to hold the returned
-'       calibration offset values.
-
+'       When rw == W (1, write)
+'           ptr_x, ptr_y, ptr_z: -16384..16384
+'       When rw == R (0, read)
+'           ptr_x, ptr_y, ptr_z:
+'               Pointers to variables to hold current settings for respective
+'               axes
+'   NOTE: When writing new offsets, any values outside of the range
+'       -16384..16383 will be clamped (e.g., calling with 16390 will actually
+'       set 16383)
     case rw
         R:
-            long[mxbias] := _mbiasraw[X_AXIS]
-            long[mybias] := _mbiasraw[Y_AXIS]
-            long[mzbias] := _mbiasraw[Z_AXIS]
-
+            readreg(core#M_OFF_X_MSB, 6, @tmp)
+            long[bias_x] := ~~tmp.word[0]
+            long[bias_y] := ~~tmp.word[1]
+            long[bias_z] := ~~tmp.word[2]
         W:
-            case mxbias
-                -32768..32767:
-                    _mbiasraw[X_AXIS] := mxbias
-                OTHER:
-
-            case mybias
-                -32768..32767:
-                    _mbiasraw[Y_AXIS] := mybias
-                OTHER:
-
-            case mzbias
-                -32768..32767:
-                    _mbiasraw[Z_AXIS] := mzbias
-                OTHER:
-        OTHER:
-            return
+            tmp.word[0] := bias_x := (-16384 #> bias_x <# 16383) << 1
+            tmp.word[1] := bias_y := (-16384 #> bias_y <# 16383) << 1
+            tmp.word[2] := bias_z := (-16384 #> bias_z <# 16383) << 1
+            writereg(core#M_OFF_X_MSB, 6, @tmp)
 
 PUB MagClearInt{} | tmp 'TODO
 ' Clear out any interrupts set up on the Magnetometer and
@@ -504,11 +494,11 @@ PUB MagClearInt{} | tmp 'TODO
 
 PUB MagData(mx, my, mz) | tmp[2]
 ' Read the Magnetometer output registers
+    tmp := 0
     readreg(core#M_OUT_X_MSB, 6, @tmp)
     long[mx] := ~~tmp.word[2]
     long[my] := ~~tmp.word[1]
     long[mz] := ~~tmp.word[0]
-    tmp := $00
 
 PUB MagDataOverrun{}: flag
 ' Flag indicating magnetometer data has overrun
