@@ -170,7 +170,7 @@ PUB MagCalc{} | mx, my, mz
 
 PUB MagRaw{} | mx, my, mz
 
-'    repeat until imu.magdataready{}
+    repeat until imu.magdataready{}
     imu.magdata(@mx, @my, @mz)
     if imu.magdataoverrun{}
         _mag_overruns++

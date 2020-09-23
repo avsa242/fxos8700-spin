@@ -510,11 +510,14 @@ PUB MagData(mx, my, mz) | tmp[2]
     long[mz] := ~~tmp.word[0]
     tmp := $00
 
-PUB MagDataOverrun{}: flag 'TODO
+PUB MagDataOverrun{}: flag
 ' Flag indicating magnetometer data has overrun
 '   Returns:
-'   NOTE: Overrun status indicates new data for axis has overwritten the previous data.
-    flag := $00
+'       TRUE (-1): data overrun
+'       FALSE (0): no data overrun
+    flag := 0
+    readreg(core#M_DR_STATUS, 1, @flag)
+    return ((flag >> core#ZYXOW) & 1) == 1
 
 PUB MagDataRate(Hz): curr_rate 'TODO
 ' Set Magnetometer Output Data Rate, in Hz
