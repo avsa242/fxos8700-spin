@@ -149,7 +149,7 @@ PUB AccelRaw{} | ax, ay, az
 
 PUB MagCalc{} | mx, my, mz
 
-'    repeat until imu.magdataready{}
+    repeat until imu.magdataready{}
     imu.maggauss(@mx, @my, @mz)
     if imu.magdataoverrun{}
         _mag_overruns++

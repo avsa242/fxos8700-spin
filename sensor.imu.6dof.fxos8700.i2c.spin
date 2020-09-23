@@ -522,10 +522,12 @@ PUB MagDataRate(Hz): curr_rate 'TODO
 '   Any other value polls the chip and returns the current setting
     curr_rate := $00
 
-PUB MagDataReady{}: flag 'TODO
-' Flag indicating new magnetometer data is available.
-'   Returns TRUE (-1) if data available, FALSE if not
-    flag := $00
+PUB MagDataReady{}: flag
+' Flag indicating new magnetometer data available
+'   Returns TRUE (-1) if data ready, FALSE otherwise
+    flag := 0
+    readreg(core#M_DR_STATUS, 1, @flag)
+    return (flag & core#ZYXDR_BITS) == %111
 
 PUB MagGauss(mx, my, mz) | tmp[3]
 ' Magnetometer data scaled to micro-Gauss (1_000_000 = 1.000000 Gs)

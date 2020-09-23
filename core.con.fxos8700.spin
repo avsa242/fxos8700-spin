@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 22, 2020
+    Updated Sep 23, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -141,7 +141,11 @@ CON
     OFF_X               = $2F
     OFF_Y               = $30
     OFF_Z               = $31
+
     M_DR_STATUS         = $32
+    M_DR_STATUS_MASK    = $FF
+' Bitfields same as STATUS ($00)
+
     M_OUT_X_MSB         = $33
     M_OUT_X_LSB         = $34
     M_OUT_Y_MSB         = $35
