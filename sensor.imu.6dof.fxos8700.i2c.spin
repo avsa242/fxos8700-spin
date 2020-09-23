@@ -5,7 +5,7 @@
     Description: Driver for the FXOS8700 6DoF IMU
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 22, 2020
+    Updated Sep 23, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -27,6 +27,10 @@ CON
     MAG_DOF                 = 3
     BARO_DOF                = 0
     DOF                     = ACCEL_DOF + GYRO_DOF + MAG_DOF + BARO_DOF
+
+' Magnetometer scaling
+    MRES_GAUSS              = 1000
+    MRES_MICROTESLA         = 100000
 
 ' Bias adjustment (AccelBias(), GyroBias(), MagBias()) read or write
     R                       = 0
@@ -523,12 +527,12 @@ PUB MagDataReady{}: flag 'TODO
 '   Returns TRUE (-1) if data available, FALSE if not
     flag := $00
 
-PUB MagGauss(mx, my, mz) | tmp[3] 'TODO
-' Read the Magnetometer output registers and scale the outputs to micro-Gauss (1_000_000 = 1.000000 Gs)
+PUB MagGauss(mx, my, mz) | tmp[3]
+' Magnetometer data scaled to micro-Gauss (1_000_000 = 1.000000 Gs)
     magdata(@tmp[X_AXIS], @tmp[Y_AXIS], @tmp[Z_AXIS])
-    long[mx] := tmp[X_AXIS] * _mres
-    long[my] := tmp[Y_AXIS] * _mres
-    long[mz] := tmp[Z_AXIS] * _mres
+    long[mx] := tmp[X_AXIS] * MRES_GAUSS
+    long[my] := tmp[Y_AXIS] * MRES_GAUSS
+    long[mz] := tmp[Z_AXIS] * MRES_GAUSS
 
 PUB MagInt{}: intsrc 'TODO
 ' Magnetometer interrupt source(s)
@@ -554,11 +558,18 @@ PUB MagOpMode(mode): curr_mode 'TODO
 '   Any other value polls the chip and returns the current setting
     curr_mode := $00
 
-PUB MagScale(scale): curr_scl 'TODO
-' Set full scale of Magnetometer, in Gauss
-'   Valid values:
-'   Any other value polls the chip and returns the current setting
-    curr_scl := $00
+PUB MagScale(scale): curr_scl
+' Set magnetometer full-scale range, in Gauss
+'   Valid values: N/A (fixed at 12Gs, 1200uT)
+'   Returns: 12
+    return 12
+
+PUB MagTesla(mx, my, mz) | tmp[3] 'XXX not overflow protected
+' Magnetometer data scaled to micro-Teslas (1_000_000 = 1.000000 uT)
+    magdata(@tmp[X_AXIS], @tmp[Y_AXIS], @tmp[Z_AXIS])
+    long[mx] := tmp[X_AXIS] * MRES_MICROTESLA
+    long[my] := tmp[Y_AXIS] * MRES_MICROTESLA
+    long[mz] := tmp[Z_AXIS] * MRES_MICROTESLA
 
 PUB OpMode(mode): curr_mode
 ' Set operating mode
