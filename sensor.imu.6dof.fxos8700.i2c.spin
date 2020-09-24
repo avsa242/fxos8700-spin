@@ -5,7 +5,7 @@
     Description: Driver for the FXOS8700 6DoF IMU
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 23, 2020
+    Updated Sep 24, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -478,13 +478,13 @@ PUB MagBias(bias_x, bias_y, bias_z, rw) | tmp[2]
     case rw
         R:
             readreg(core#M_OFF_X_MSB, 6, @tmp)
-            long[bias_x] := ~~tmp.word[0]
+            long[bias_x] := ~~tmp.word[2]
             long[bias_y] := ~~tmp.word[1]
-            long[bias_z] := ~~tmp.word[2]
+            long[bias_z] := ~~tmp.word[0]
         W:
-            tmp.word[0] := bias_x := (-16384 #> bias_x <# 16383) << 1
+            tmp.word[2] := bias_x := (-16384 #> bias_x <# 16383) << 1
             tmp.word[1] := bias_y := (-16384 #> bias_y <# 16383) << 1
-            tmp.word[2] := bias_z := (-16384 #> bias_z <# 16383) << 1
+            tmp.word[0] := bias_z := (-16384 #> bias_z <# 16383) << 1
             writereg(core#M_OFF_X_MSB, 6, @tmp)
 
 PUB MagClearInt{} | tmp 'TODO
@@ -613,9 +613,10 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
             i2c.wr_block(@cmd_pkt, 2)               ' SL|W, reg_nr
             i2c.start{}                             ' Sr
             i2c.write(_slave_addr | 1)              ' SL|R
-            i2c.rd_block(ptr_buff, nr_bytes, true)  ' R 0..nr_bytes-1
+            repeat tmp from nr_bytes-1 to 0         ' R nr_bytes-1..0
+                byte[ptr_buff][tmp] := i2c.read(tmp == 0)
             i2c.stop{}                              ' P
-        OTHER:
+        other:
             return
 
 PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
@@ -627,10 +628,10 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
             cmd_pkt.byte[1] := reg_nr
             i2c.start{}                             ' S
             i2c.wr_block(@cmd_pkt, 2)               ' SL|W, reg_nr
-            i2c.wr_block(ptr_buff, nr_bytes)        ' W ptr_buff[0..nr_bytes-1]
+            repeat tmp from nr_bytes-1 to 0         ' W ptr_buff[nr_bytes-1..0]
+                i2c.write(byte[ptr_buff][tmp])
             i2c.stop{}                              ' P
-
-        OTHER:
+        other:
             return
 DAT
 {
