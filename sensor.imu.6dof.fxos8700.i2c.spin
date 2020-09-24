@@ -294,29 +294,23 @@ PUB CalibrateAccel{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples 'TODO
     fifoenabled(FALSE)
     fifomode(BYPASS)
 
-PUB CalibrateMag{} | magmin[3], magmax[3], magtmp[3], axis, mx, my, mz, msb, lsb, samples 'TODO
-' Calibrates the Magnetometer on the FXOS8700 IMU module
-    magtmp[0] := magtmp[1] := magtmp[2] := 0    'Initialize all variables to 0
-    magmin[0] := magmin[1] := magmin[2] := 0
-    magmax[0] := magmax[1] := magmax[2] := 0
-    axis := mx := my := mz := msb := lsb := 0
-    magbias(0, 0, 0, W)
+PUB CalibrateMag{} | magtmp[3], axis, mx, my, mz, samples
+' Calibrate the magnetometer
+    longfill(@magtmp, 0, 8)                         ' Initialize vars to 0
+    magbias(0, 0, 0, W)                             ' Clear out existing bias
 
+    samples := 32
     repeat samples
-        repeat until magdataready
+        repeat until magdataready{}
         magdata(@mx, @my, @mz)
-        magtmp[X_AXIS] := mx
-        magtmp[Y_AXIS] := my
-        magtmp[Z_AXIS] := mz
-        repeat axis from X_AXIS to Z_AXIS
-            if (magtmp[axis] > magmax[axis])
-                magmax[axis] := magtmp[axis]
-            if (magtmp[axis] < magmin[axis])
-                magmin[axis] := magtmp[axis]
-    repeat axis from X_AXIS to Z_AXIS
-        _mbiasraw[axis] := (magmax[axis] + magmin[axis]) / 2
-        msb := (_mbiasraw[axis] & $FF00) >> 8
-        lsb := _mbiasraw[axis] & $00FF
+        magtmp[X_AXIS] += mx                        ' Accumulate samples
+        magtmp[Y_AXIS] += my
+        magtmp[Z_AXIS] += mz
+
+    repeat axis from X_AXIS to Z_AXIS               '   then average them
+        magtmp[axis] /= samples
+
+    magbias(magtmp[X_AXIS], magtmp[Y_AXIS], magtmp[Z_AXIS], W)
 
 PUB DeviceID{}: id
 ' Read device identification

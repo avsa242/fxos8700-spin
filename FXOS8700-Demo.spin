@@ -194,7 +194,7 @@ PUB Calibrate{}
 
     ser.position(0, 12)
     ser.str(string("Calibrating..."))
-    imu.calibrateaccel{}
+'    imu.calibrateaccel{}
     imu.calibratemag{}
     ser.position(0, 12)
     ser.str(string("              "))
