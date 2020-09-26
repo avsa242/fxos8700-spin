@@ -43,9 +43,9 @@ CON
     ALL_AXIS                = 3
 
 ' Temperature scale constants
-    CELSIUS                 = 0
-    FAHRENHEIT              = 1
-    KELVIN                  = 2
+    C                       = 0
+    F                       = 1
+    K                       = 2
 
 ' Endian constants
     LITTLE                  = 0
@@ -76,9 +76,9 @@ VAR
 
     long _ares, _abiasraw[3]
     long _mres, _mbiasraw[3]
-    byte _slave_addr
+    byte _slave_addr, _temp_scale
 
-PUB Null
+PUB Null{}
 'This is not a top-level object  
 
 PUB Start{}
@@ -116,6 +116,7 @@ PUB AccelADCRes(bits): curr_res
 
 PUB AccelAxisEnabled(xyz_mask): curr_mask
 ' dummy method
+    return %111
 
 PUB AccelBias(bias_x, bias_y, bias_z, rw) | tmp, opmode_orig
 ' Read or write/manually set accelerometer calibration offset values
@@ -578,15 +579,39 @@ PUB OpMode(mode): curr_mode
     mode := ((curr_mode & core#M_HMS_MASK) | mode) & core#M_CTRL_REG1_MASK
     writereg(core#M_CTRL_REG1, 1, @mode)
 
-PUB Temperature{}: temp 'TODO
-' Get temperature from chip
+PUB Temperature{}: temp
+' Read chip temperature
 '   Returns: Temperature in hundredths of a degree Celsius (1000 = 10.00 deg C)
-    temp := $00
+'   NOTE: OpMode() must be set to MAG (1) or BOTH (3) to read data from
+'       the temperature sensor
+'   NOTE: Output data rate is unaffected by AccelDataRate() or
+'       MagDataRate() settings
+    temp := 0
+    readreg(core#TEMP, 1, @temp)
+    temp *= 96                                      ' Res is 0.96C per LSB
+    case _temp_scale
+        C:
+        F:
+            temp := ((temp * 9_00) / 5_00) + 32_00
+        K:
+            temp += 273_15
 
-PUB TempDataReady{}: flag 'TODO
+PUB TempDataReady{}: flag
 ' Flag indicating new temperature sensor data available
-'   Returns TRUE or FALSE
-    flag := $00
+'   Returns: TRUE (-1)
+    return TRUE
+
+PUB TempScale(scale): curr_scale
+' Set temperature scale used by Temperature method
+'   Valid values:
+'       C (0): Celsius
+'       F (1): Fahrenheit
+'   Any other value returns the current setting
+    case scale
+        C, F, K:
+            _temp_scale := scale
+        other:
+            return _temp_scale
 
 PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
 ' Read nr_bytes from device into ptr_buff

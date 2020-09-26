@@ -32,13 +32,18 @@ CON
     DATA_Z_COL  = DATA_Y_COL+12
     DATA_OVR_COL= DATA_Z_COL+12
 
+' Temperature scales
+    C           = 0
+    F           = 1
+    K           = 2
+
 VAR
 
     long _accel_overruns, _mag_overruns
 
 OBJ
 
-    cfg     : "core.con.boardcfg.p2eval"                      ' Constants for clock setup, I/O pins, etc
+    cfg     : "core.con.boardcfg.p2eval"                    ' Constants for clock setup, I/O pins, etc
     ser     : "com.serial.terminal.ansi"
     time    : "time"
     io      : "io"
@@ -49,10 +54,11 @@ PUB Main() | dispmode
 
     setup()
     imu.opmode(imu#BOTH)
+    imu.tempscale(C)
     imu.accelopmode(imu#MEASURE)
     imu.accellowpassfilter(false)
     imu.accelscale(2)                                       ' 2, 4, 8 (g's)
-    imu.acceldatarate(800)                                   ' 1, 6, 12, 50, 100, 200, 400, 800
+    imu.acceldatarate(50)                                   ' 1, 6, 12, 50, 100, 200, 400, 800
     imu.accelbias(0, 0, 0, 1)                               ' x, y, z: -128..127, rw: 0 (R), 1 (W)
 
     imu.magbias(0, 0, 0, 1)                                 ' x, y, z: -16384..16383, rw: 0 (R), 1 (W)
@@ -92,9 +98,11 @@ PUB Main() | dispmode
             0:
                 accelraw()
                 magraw()
+                temperature()
             1:
                 accelcalc()
                 magcalc()
+                temperature()
     ser.showcursor()
 
 PUB AccelCalc() | ax, ay, az
@@ -179,6 +187,15 @@ PUB MagRaw() | mx, my, mz
 
     ser.positionx(DATA_OVR_COL)
     ser.dec (_mag_overruns)
+    ser.newline()
+
+PUB Temperature()
+
+    ser.printf("temp:")
+
+    ser.positionx(DATA_X_COL)
+    decimaldot(imu.temperature(), 100)
+    ser.char(lookupz(imu.tempscale(): "C", "F", "K"))
     ser.newline()
 
 PUB Calibrate()

@@ -32,6 +32,11 @@ CON
     DATA_Z_COL  = DATA_Y_COL+12
     DATA_OVR_COL= DATA_Z_COL+12
 
+' Temperature scales
+    C           = 0
+    F           = 1
+    K           = 2
+
 VAR
 
     long _accel_overruns, _mag_overruns
@@ -49,6 +54,7 @@ PUB Main{} | dispmode
 
     setup{}
     imu.opmode(imu#BOTH)
+    imu.tempscale(C)
     imu.accelopmode(imu#MEASURE)
     imu.accellowpassfilter(false)
     imu.accelscale(2)                                       ' 2, 4, 8 (g's)
@@ -93,9 +99,11 @@ PUB Main{} | dispmode
             0:
                 accelraw{}
                 magraw{}
+                temperature{}
             1:
                 accelcalc{}
                 magcalc{}
+                temperature{}
     ser.showcursor{}
 
 PUB AccelCalc{} | ax, ay, az
@@ -180,6 +188,15 @@ PUB MagRaw{} | mx, my, mz
 
     ser.positionx(DATA_OVR_COL)
     ser.dec (_mag_overruns)
+    ser.newline{}
+
+PUB Temperature{}
+
+    ser.str(string("temp:"))
+
+    ser.positionx(DATA_X_COL)
+    decimaldot(imu.temperature{}, 100)
+    ser.char(lookupz(imu.tempscale(-2): "C", "F", "K"))
     ser.newline{}
 
 PUB Calibrate{}
