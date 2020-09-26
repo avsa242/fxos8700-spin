@@ -41,7 +41,7 @@ P2/SPIN2:
 
 - [x] Port to P2/SPIN2
 - [x] Implement temperature sensor support
-- [ ] Implement MagDataRate()
+- [x] Implement MagDataRate()
 
 Expand interrupt support:
 - [ ] Magnetometer interrupts
