@@ -5,7 +5,7 @@
     Description: Driver for the FXOS8700 6DoF IMU
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 24, 2020
+    Updated Sep 26, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -121,9 +121,9 @@ PUB AccelBias(bias_x, bias_y, bias_z, rw) | tmp, opmode_orig
 ' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
-'           ptr_x, ptr_y, ptr_z: -128..127
+'           bias_x, bias_y, bias_z: -128..127
 '       When rw == R (0, read)
-'           ptr_x, ptr_y, ptr_z:
+'           bias_x, bias_y, bias_z:
 '               Pointers to variables to hold current settings for respective
 '               axes
 '   NOTE: When writing new offsets, any values outside of the range -128..127
@@ -131,13 +131,13 @@ PUB AccelBias(bias_x, bias_y, bias_z, rw) | tmp, opmode_orig
     case rw
         R:
             readreg(core#OFF_X, 3, @tmp)
-            long[bias_x] := ~tmp.byte[0]
+            long[bias_x] := ~tmp.byte[2]
             long[bias_y] := ~tmp.byte[1]
-            long[bias_z] := ~tmp.byte[2]
+            long[bias_z] := ~tmp.byte[0]
         W:
-            tmp.byte[0] := bias_x := -128 #> bias_x <# 127
+            tmp.byte[2] := bias_x := -128 #> bias_x <# 127
             tmp.byte[1] := bias_y := -128 #> bias_y <# 127
-            tmp.byte[2] := bias_z := -128 #> bias_z <# 127
+            tmp.byte[0] := bias_z := -128 #> bias_z <# 127
             opmode_orig := accelopmode(-2)
             accelopmode(STANDBY)
             writereg(core#OFF_X, 3, @tmp)
@@ -265,34 +265,35 @@ PUB AccelScale(g): curr_scale | opmode_orig
     writereg(core#XYZ_DATA_CFG, 1, @g)
     accelopmode(opmode_orig)
 
-PUB CalibrateAccel{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples 'TODO
+PUB CalibrateAccel{} | acceltmp[3], axis, ax, ay, az, samples, scale_orig, drate_orig, fifo_orig, scl
 ' Calibrate the accelerometer
 '   NOTE: The accelerometer must be oriented with the package top facing up for this method to be successful
-    tmpx := tmpy := tmpz := axis := samples := 0
-    longfill(@tmpbiasraw, 0, 3)
+    longfill(@acceltmp, 0, 11)
     accelbias(0, 0, 0, W)
+    scale_orig := accelscale(-2)                    ' Preserve users' original
+    drate_orig := acceldatarate(-2)                 '   settings
+    fifo_orig := fifomode(-2)
 
-    acceladcres(0)
-    accelscale(0)       ' Set according to datasheet/AN recommendations
-    acceldatarate(0)
-
-    fifoenabled(TRUE)   ' Use the FIFO, if it exists
-    fifomode(FIFO)
-    fifothreshold (0)  ' Set according to datasheet/AN recommendations
-    samples := fifothreshold(-2)
-    repeat until fifofull{}
-
+    fifomode(BYPASS)                                ' Bypass FIFO, set accel
+    accelscale(2)                                   ' to most sensitive scale
+    acceldatarate(100)                              ' and 100Hz data rate
+    scl := _ares / 2                                ' Scale down to 2mg/LSB
+    samples := 32
     repeat samples
-' Read the accel data stored in the FIFO
-        acceldata(@tmpx, @tmpy, @tmpz)
-        tmpbiasraw[X_AXIS] += tmpx
-        tmpbiasraw[Y_AXIS] += tmpy
-        tmpbiasraw[Z_AXIS] += tmpz - (1_000_000 / _ares) ' Assumes sensor facing up!
+        repeat until acceldataready{}
+        acceldata(@ax, @ay, @az)
+        acceltmp[X_AXIS] -= (ax / scl)              ' Accumulate samples
+        acceltmp[Y_AXIS] -= (ay / scl)
+        acceltmp[Z_AXIS] -= (az - (1_000_000 / _ares)) / scl
 
-    accelbias(tmpbiasraw[X_AXIS]/samples, tmpbiasraw[Y_AXIS]/samples, tmpbiasraw[Z_AXIS]/samples, W)
+    repeat axis from X_AXIS to Z_AXIS               '   then average them
+        acceltmp[axis] /= samples
 
-    fifoenabled(FALSE)
-    fifomode(BYPASS)
+    accelbias(acceltmp[X_AXIS], acceltmp[Y_AXIS], acceltmp[Z_AXIS], W)
+
+    accelscale(scale_orig)
+    acceldatarate(drate_orig)
+    fifomode(fifo_orig)
 
 PUB CalibrateMag{} | magtmp[3], axis, mx, my, mz, samples
 ' Calibrate the magnetometer

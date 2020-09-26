@@ -5,7 +5,7 @@
     Description: Demo of the FXOS8700 driver
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 23, 2020
+    Updated Sep 26, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -55,15 +55,8 @@ PUB Main{} | dispmode
     imu.accelscale(2)                                       ' 2, 4, 8 (g's)
     imu.acceldatarate(50)                                   ' 1, 6, 12, 50, 100, 200, 400, 800
     imu.accelbias(0, 0, 0, 1)                               ' x, y, z: -128..127, rw: 0 (R), 1 (W)
-'    imu.accelaxisenabled(%111)                              ' 0 or 1 for each bit (%xyz)
-    imu.fifomode(imu#BYPASS)                                ' imu#BYPASS, imu#FIFO, imu#STREAM, imu#TRIGGER
-    imu.fifothreshold(0)                                    ' 0..32
-'    imu.intthresh(1_000000)                                 ' 0..16_000000 (micro-g's, i.e., 0..16g)
-    imu.intmask(%00000000)                                  ' Bits 7..0
 
     imu.magbias(0, 0, 0, 1)                                 ' x, y, z: -16384..16383, rw: 0 (R), 1 (W)
-'    imu.magscale(1_3)
-'    imu.magdatarate(15)
 
     ser.hidecursor{}
     dispmode := 0
@@ -194,7 +187,7 @@ PUB Calibrate{}
 
     ser.position(0, 12)
     ser.str(string("Calibrating..."))
-'    imu.calibrateaccel{}
+    imu.calibrateaccel{}
     imu.calibratemag{}
     ser.position(0, 12)
     ser.str(string("              "))
@@ -208,9 +201,6 @@ PUB DisplaySettings{} | axo, ayo, azo, mxo, myo, mzo
     ser.str(string("AccelScale: "))
     ser.dec(imu.accelscale(-2))
     ser.newline{}
-'    ser.str(string("AccelADCRes: "))
-'    ser.dec(imu.acceladcres(-2))
-'    ser.newline{}
     imu.accelbias(@axo, @ayo, @azo, 0)
     ser.str(string("AccelBias: "))
     ser.dec(axo)
@@ -222,18 +212,6 @@ PUB DisplaySettings{} | axo, ayo, azo, mxo, myo, mzo
     ser.newline{}
     ser.str(string("AccelDataRate: "))
     ser.dec(imu.acceldatarate(-2))
-    ser.newline{}
-    ser.str(string("FIFOMode: "))
-    ser.strln(lookupz(imu.fifomode(-2): string("BYPASS"), string("STREAM"), string("FIFO"), string("TRIGGER")))
-
-    ser.str(string("FIFOThreshold: "))
-    ser.dec(imu.fifothreshold(-2))
-    ser.newline{}
-'    ser.str(string("IntThresh: "))
-'    ser.dec(imu.intthresh(-2))
-'    ser.newline{}
-    ser.str(string("IntMask: "))
-    ser.bin(imu.intmask(-2), 8)
     ser.newline{}
 '    ser.str(string("MagScale: "))                         '
 '    ser.dec(imu.magscale(-2))
