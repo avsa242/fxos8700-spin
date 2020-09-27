@@ -607,12 +607,20 @@ PUB MagInt{}: intsrc 'TODO
 '   Returns: Interrupts that are currently asserted, as a bitmask
     intsrc := $00
 
-PUB MagIntsEnabled(enable_mask): curr_mask 'TODO
-' Enable magnetometer interrupts, as a bitmask
-'   Valid values:
-'
+PUB MagIntsEnabled(enabled): curr_state
+' Enable magnetometer data threshold interrupt
+'   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
-    curr_mask := $00
+    curr_state := 0
+    readreg(core#M_THS_CFG, 1, @curr_state)
+    case ||(enabled)
+        0, 1:
+            enabled := ||(enabled) << core#THS_INT_EN
+        other:
+            return ((curr_state >> core#THS_INT_EN) & 1) == 1
+
+    enabled := ((curr_state & core#THS_INT_EN_MASK) | enabled) & core#M_THS_CFG_MASK
+    writereg(core#M_THS_CFG, 1, @enabled)
 
 PUB MagIntThresh(level): curr_thr 'TODO
 ' Set magnetometer interrupt threshold

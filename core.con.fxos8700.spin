@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 23, 2020
+    Updated Sep 27, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -177,7 +177,26 @@ CON
     MIN_Z_MSB           = $4F
     MIN_Z_LSB           = $50
     TEMP                = $51
+
     M_THS_CFG           = $52
+    M_THS_CFG_MASK      = $FF
+        THS_ELE         = 7
+        THS_OAE         = 6
+        THS_ZEFE        = 5
+        THS_YEFE        = 4
+        THS_XEFE        = 3
+        THS_WAKE_EN     = 2
+        THS_INT_EN      = 1
+        THS_INT_CFG     = 0
+        THS_ELE_MASK    = (1 << THS_ELE) ^ M_THS_CFG_MASK
+        THS_OAE_MASK    = (1 << THS_OAE) ^ M_THS_CFG_MASK
+        THS_ZEFE_MASK   = (1 << THS_ZEFE) ^ M_THS_CFG_MASK
+        THS_YEFE_MASK   = (1 << THS_YEFE) ^ M_THS_CFG_MASK
+        THS_XEFE_MASK   = (1 << THS_XEFE) ^ M_THS_CFG_MASK
+        THS_WAKE_EN_MASK= (1 << THS_WAKE_EN) ^ M_THS_CFG_MASK
+        THS_INT_EN_MASK = (1 << THS_INT_EN) ^ M_THS_CFG_MASK
+        THS_INT_CFG_MASK= (1 << THS_INT_CFG) ^ M_THS_CFG_MASK
+
     M_THS_SRC           = $53
     M_THS_X_MSB         = $54
     M_THS_X_LSB         = $55

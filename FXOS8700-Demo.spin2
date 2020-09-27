@@ -62,7 +62,7 @@ PUB Main() | dispmode
     imu.magbias(0, 0, 0, 1)             ' x, y, z: -16384..16383, rw: 0/1 (R/W)
     imu.magdataoversampling(2)          ' 2..1024 (powers of 2)
                                         ' (dependent upon data rate)
-    ser.hidecursor()'                                                          |
+    ser.hidecursor()
     dispmode := 0
 
     displaysettings()
