@@ -602,10 +602,15 @@ PUB MagGauss(mx, my, mz) | tmp[3]
     long[my] := tmp[Y_AXIS] * MRES_GAUSS
     long[mz] := tmp[Z_AXIS] * MRES_GAUSS
 
-PUB MagInt{}: intsrc 'TODO
+PUB MagInt{}: magintsrc
 ' Magnetometer interrupt source(s)
 '   Returns: Interrupts that are currently asserted, as a bitmask
-    intsrc := $00
+'       Bits: 210
+'           2: Magnetic threshold interrupt
+'           1: Magnetic vector-magnitude interrupt
+'           0: Magnetic data-ready interrupt
+    magintsrc := 0
+    readreg(core#M_INT_SRC, 1, @magintsrc)
 
 PUB MagIntsEnabled(enabled): curr_state
 ' Enable magnetometer data threshold interrupt
@@ -627,6 +632,39 @@ PUB MagIntThresh(level): curr_thr 'TODO
 '   Valid values:
 '   Any other value polls the chip and returns the current setting
     curr_thr := $00
+
+PUB MagIntThreshX(thresh): curr_thr
+' Set magnetometer interrupt threshold, X-axis
+'   Valid values: 0..32767
+'   Any other value polls the chip and returns the current setting
+    case thresh
+        0..32767:
+            writereg(core#M_THS_X_MSB, 2, @thresh)
+        other:
+            curr_thr := 0
+            readreg(core#M_THS_X_MSB, 2, @curr_thr)
+
+PUB MagIntThreshY(thresh): curr_thr
+' Set magnetometer interrupt threshold, Y-axis
+'   Valid values: 0..32767
+'   Any other value polls the chip and returns the current setting
+    case thresh
+        0..32767:
+            writereg(core#M_THS_Y_MSB, 2, @thresh)
+        other:
+            curr_thr := 0
+            readreg(core#M_THS_Y_MSB, 2, @curr_thr)
+
+PUB MagIntThreshZ(thresh): curr_thr
+' Set magnetometer interrupt threshold, Z-axis
+'   Valid values: 0..32767
+'   Any other value polls the chip and returns the current setting
+    case thresh
+        0..32767:
+            writereg(core#M_THS_Z_MSB, 2, @thresh)
+        other:
+            curr_thr := 0
+            readreg(core#M_THS_Z_MSB, 2, @curr_thr)
 
 PUB MagOpMode(mode): curr_mode 'TODO
 ' Set magnetometer operating mode
