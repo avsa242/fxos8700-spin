@@ -9,7 +9,7 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for the NXP FXO
 
 * I2C connection at up to 400kHz (with optional alternate slave addresses)
 * Read raw accelerometer, magnetometer data output, or scaled (micro-g's, micro-gauss, resp.), scaled temperature (C, F, K)
-* Set output data rate
+* Set output data rate (accel+mag locked), oversampling ratio (mag)
 * Set full-scale range (accel only; chip magnetometer is fixed at 1200uT, but retains MagScale() method for API compatibility)
 * Flags to indicate data is ready (accel, mag), has overrun (accel, mag)
 * Automatically or manually set bias offsets (accel, mag)

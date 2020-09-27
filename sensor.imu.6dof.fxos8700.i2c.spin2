@@ -603,14 +603,15 @@ PUB MagGauss(mx, my, mz) | tmp[3]
 PUB MagInt(): intsrc 'TODO
 ' Magnetometer interrupt source(s)
 '   Returns: Interrupts that are currently asserted, as a bitmask
-    intsrc := $00
+'       Bits: 210
+'           2: Magnetic threshold interrupt
+'           1: Magnetic vector-magnitude interrupt
+'           0: Magnetic data-ready interrupt
+    intsrc := 0
+    readreg(core#M_INT_SRC, 1, @intsrc)
 
-PUB MagIntsEnabled(enable_mask): curr_mask 'TODO
-' Enable magnetometer interrupts, as a bitmask
-'   Valid values:
-'
-'   Any other value polls the chip and returns the current setting
-    curr_mask := $00
+PUB MagIntsEnabled(enable_mask): curr_mask
+' dummy method
 
 PUB MagIntThresh(level): curr_thr 'TODO
 ' Set magnetometer interrupt threshold
