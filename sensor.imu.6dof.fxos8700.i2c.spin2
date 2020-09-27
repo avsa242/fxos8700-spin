@@ -683,6 +683,22 @@ PUB MagTesla(mx, my, mz) | tmp[3] 'XXX not overflow protected
     long[my] := tmp[Y_AXIS] * MRES_MICROTESLA
     long[mz] := tmp[Z_AXIS] * MRES_MICROTESLA
 
+PUB MagThreshInt(): int_src
+' Magnetometer threshold-related interrupt source(s)
+'   Returns: Interrupts that are currently asserted, as a bitmask
+'       Bits: 76543210
+'           State indicated when bit is set, unless otherwise noted:
+'           7: One or more flags asserted
+'           5: Z-axis high interrupt
+'           4: Z-axis flag negative (1), or positive (0)
+'           3: Y-axis high interrupt
+'           2: Y-axis flag negative (1), or positive (0)
+'           1: X-axis high interrupt
+'           0: X-axis flag negative (1), or positive (0)
+'   NOTE: Bits 5..0 will always indicate 0 if the respective thresholds
+'       are set to 0
+    readreg(core.M_THS_SRC, 1, @int_src)
+
 PUB MagThreshIntMask(mask): curr_mask
 ' Set magnetometer threshold interrupt mask
 '   Bits: [7..0]
