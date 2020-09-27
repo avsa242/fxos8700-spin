@@ -685,6 +685,39 @@ PUB MagTesla(mx, my, mz) | tmp[3] 'XXX not overflow protected
     long[my] := tmp[Y_AXIS] * MRES_MICROTESLA
     long[mz] := tmp[Z_AXIS] * MRES_MICROTESLA
 
+PUB MagThreshIntMask(mask): curr_mask
+' Set magnetometer threshold interrupt mask
+'   Bits: [7..0]
+'       7: Interrupt latch enabled (cleared only by reading MagThreshInt())
+'       6: Logic OR of X, Y, Z interrupts (0: Logic AND)
+'       5: Enable Z-axis threshold interrupt
+'       4: Enable Y-axis threshold interrupt
+'       3: Enable X-axis threshold interrupt
+'       2: Threshold interrupt included when evaluating auto-sleep/wake
+'   Any other value polls the chip and returns the current setting
+    case mask
+        0..%11111100:
+            writereg(core#M_THS_CFG, 1, @mask)
+        other:
+            curr_mask := 0
+            readreg(core#M_THS_CFG, 1, @curr_mask)
+            return
+
+PUB MagThreshIntsEnabled(enabled): curr_state
+' Enable magnetometer threshold interrupts
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+    curr_state := 0
+    readreg(core#M_THS_CFG, 1, @curr_state)
+    case ||(enabled)
+        0, 1:
+            enabled := ||(enabled) << core#THS_INT_EN
+        other:
+            return ((curr_state >> core#THS_INT_EN) & 1) == 1
+
+    enabled := ((curr_state & core#THS_INT_EN_MASK) | enabled) & core#M_THS_CFG_MASK
+    writereg(core#M_THS_CFG, 1, @enabled)
+
 PUB OpMode(mode): curr_mode
 ' Set operating mode
 '   Valid values:
