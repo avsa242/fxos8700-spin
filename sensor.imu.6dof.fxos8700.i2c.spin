@@ -5,7 +5,7 @@
     Description: Driver for the FXOS8700 6DoF IMU
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 26, 2020
+    Updated Sep 27, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -506,6 +506,79 @@ PUB MagDataOverrun{}: flag
     flag := 0
     readreg(core#M_DR_STATUS, 1, @flag)
     return ((flag >> core#ZYXOW) & 1) == 1
+
+PUB MagDataOverSampling(ratio): curr_ratio
+' Set oversampling ratio for magnetometer output data
+'   Valid values: (dependent upon current MagDataRate())
+'       2, 4, 8, 16, 32, 64, 128, 256, 512, 1024
+'   Any other value polls the chip and returns the current setting
+    curr_ratio := 0
+    readreg(core#M_CTRL_REG1, 1, @curr_ratio)
+    case magdatarate(-2)
+        1:
+            case ratio
+                16, 32, 64, 128, 256, 512, 1024:
+                    ratio := lookdownz(ratio: 16, 16, 32, 64, 128, 256, 512, 1024)
+                    ratio <<= core#M_OS
+                other:
+                    curr_ratio := (curr_ratio >> core#M_OS) & core#M_OS_BITS
+                    return lookupz(curr_ratio: 16, 16, 32, 64, 128, 256, 512, 1024)
+        6:
+            case ratio
+                4, 8, 16, 32, 64, 128, 256:
+                    ratio := lookdownz(ratio: 4, 4, 8, 16, 32, 64, 128, 256)
+                    ratio <<= core#M_OS
+                other:
+                    curr_ratio := (curr_ratio >> core#M_OS) & core#M_OS_BITS
+                    return lookupz(curr_ratio: 4, 4, 8, 16, 32, 64, 128, 256)
+        12:
+            case ratio
+                2, 4, 8, 16, 32, 64, 128:
+                    ratio := lookdownz(ratio: 2, 2, 4, 8, 16, 32, 64, 128)
+                    ratio <<= core#M_OS
+                other:
+                    curr_ratio := (curr_ratio >> core#M_OS) & core#M_OS_BITS
+                    return lookupz(curr_ratio: 2, 2, 4, 8, 16, 32, 64, 128)
+        50:
+            case ratio
+                2, 4, 8, 16, 32:
+                    ratio := lookdownz(ratio: 2, 2, 2, 2, 4, 8, 16, 32)
+                    ratio <<= core#M_OS
+                other:
+                    curr_ratio := (curr_ratio >> core#M_OS) & core#M_OS_BITS
+                    return lookupz(curr_ratio: 2, 2, 2, 2, 4, 8, 16, 32)
+        100:
+            case ratio
+                2, 4, 8, 16:
+                    ratio := lookdownz(ratio: 2, 2, 2, 2, 2, 4, 8, 16)
+                    ratio <<= core#M_OS
+                other:
+                    curr_ratio := (curr_ratio >> core#M_OS) & core#M_OS_BITS
+                    return lookupz(curr_ratio: 2, 2, 2, 2, 2, 4, 8, 16)
+        200:
+            case ratio
+                2, 4, 8:
+                    ratio := lookdownz(ratio: 2, 2, 2, 2, 2, 2, 4, 8)
+                    ratio <<= core#M_OS
+                other:
+                    curr_ratio := (curr_ratio >> core#M_OS) & core#M_OS_BITS
+                    return lookupz(curr_ratio: 2, 2, 2, 2, 2, 2, 4, 8)
+        400:
+            case ratio
+                2, 4:
+                    ratio := lookdownz(ratio: 2, 2, 2, 2, 2, 2, 2, 4)
+                    ratio <<= core#M_OS
+                other:
+                    curr_ratio := (curr_ratio >> core#M_OS) & core#M_OS_BITS
+                    return lookupz(curr_ratio: 2, 2, 2, 2, 2, 2, 2, 4)
+        800:
+            case ratio
+                2:
+                other:
+                    return 2
+
+    ratio := ((curr_ratio & core#M_OS_MASK) | ratio) & core#M_CTRL_REG1_MASK
+    writereg(core#M_CTRL_REG1, 1, @ratio)
 
 PUB MagDataRate(Hz): curr_rate
 ' Set Magnetometer Output Data Rate, in Hz

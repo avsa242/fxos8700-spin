@@ -5,7 +5,7 @@
     Description: Demo of the FXOS8700 driver
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 26, 2020
+    Updated Sep 27, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -24,7 +24,7 @@ CON
     I2C_SCL     = cfg#SCL
     I2C_SDA     = cfg#SDA
     I2C_HZ      = 400_000
-    SL_ADDR_BITS= %11                               ' %00..11 ($1E, 1D, 1C, 1F)
+    SL_ADDR_BITS= %11                   ' %00..11 ($1E, 1D, 1C, 1F)
 ' --
 
     DATA_X_COL  = 20
@@ -43,12 +43,11 @@ VAR
 
 OBJ
 
-    cfg     : "core.con.boardcfg.flip"                      ' Constants for clock setup, I/O pins, etc
-    ser     : "com.serial.terminal.ansi"
-    time    : "time"
-    io      : "io"
-    imu     : "sensor.imu.6dof.fxos8700.i2c"
-    int     : "string.integer"
+    cfg : "core.con.boardcfg.flip"      ' Clock setup, I/O pins, etc
+    ser : "com.serial.terminal.ansi"
+    time: "time"
+    imu : "sensor.imu.6dof.fxos8700.i2c"
+    int : "string.integer"
 
 PUB Main{} | dispmode
 
@@ -57,29 +56,30 @@ PUB Main{} | dispmode
     imu.tempscale(C)
     imu.accelopmode(imu#MEASURE)
     imu.accellowpassfilter(false)
-    imu.accelscale(2)                                       ' 2, 4, 8 (g's)
-    imu.acceldatarate(50)                                   ' 1, 6, 12, 50, 100, 200, 400, 800
-    imu.accelbias(0, 0, 0, 1)                               ' x, y, z: -128..127, rw: 0 (R), 1 (W)
+    imu.accelscale(2)                   ' 2, 4, 8 (g's)
+    imu.acceldatarate(50)               ' 1, 6, 12, 50, 100, 200, 400, 800
+    imu.accelbias(0, 0, 0, 1)           ' x, y, z: -128..127, rw: 0/1 (R/W)
 
-    imu.magbias(0, 0, 0, 1)                                 ' x, y, z: -16384..16383, rw: 0 (R), 1 (W)
-
+    imu.magbias(0, 0, 0, 1)             ' x, y, z: -16384..16383, rw: 0/1 (R/W)
+    imu.magdataoversampling(2)          ' 2..1024 (powers of 2)
+                                        ' (dependent upon data rate)
     ser.hidecursor{}
     dispmode := 0
 
     displaysettings{}
     repeat
         case ser.rxcheck{}
-            "q", "Q":                                       ' Quit the demo
+            "q", "Q":                   ' Quit the demo
                 ser.position(0, 15)
                 ser.str(string("Halting"))
                 imu.stop{}
                 time.msleep(5)
                 ser.stop
                 quit
-            "c", "C":                                       ' Perform calibration
+            "c", "C":                   ' Perform calibration
                 calibrate{}
                 displaysettings{}
-            "r", "R":                                       ' Change display mode: raw/calculated
+            "r", "R":                   ' Change display mode: raw/calculated
                 ser.position(0, 15)
                 repeat 2
                     ser.clearline{}
@@ -210,7 +210,7 @@ PUB Calibrate{}
 
 PUB DisplaySettings{} | axo, ayo, azo, mxo, myo, mzo
 
-    ser.position(0, 3)                                      ' Read back the settings from above
+    ser.position(0, 3)                  ' Read back the settings from above
     ser.str(string("AccelOpMode: "))
     ser.dec(imu.accelopmode(-2))
     ser.newline
@@ -229,12 +229,15 @@ PUB DisplaySettings{} | axo, ayo, azo, mxo, myo, mzo
     ser.str(string("AccelDataRate: "))
     ser.dec(imu.acceldatarate(-2))
     ser.newline{}
-'    ser.str(string("MagScale: "))                         '
-'    ser.dec(imu.magscale(-2))
-'    ser.newline{}
-'    ser.str(string("MagDataRate: "))
-'    ser.dec(imu.magdatarate(-2))
-'    ser.newline{}
+    ser.str(string("MagScale: "))
+    ser.dec(imu.magscale(-2))
+    ser.newline{}
+    ser.str(string("MagDataRate: "))
+    ser.dec(imu.magdatarate(-2))
+    ser.newline{}
+    ser.str(string("MagDataOverSampling: "))
+    ser.dec(imu.magdataoversampling(-2))
+    ser.newline{}
 '    ser.str(string("MagOpMode: "))
 '    ser.dec(imu.magopmode(-2))
 '    ser.newline{}
@@ -249,7 +252,8 @@ PUB DisplaySettings{} | axo, ayo, azo, mxo, myo, mzo
     ser.newline{}
 
 PUB DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
-' Display a scaled up number in its natural form - scale it back down by divisor
+' Display a scaled up number as a decimal
+'   Scale it back down by divisor (e.g., 10, 100, 1000, etc)
     whole := scaled / divisor
     tmp := divisor
     places := 0
@@ -265,16 +269,16 @@ PUB DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
         places++
     until tmp == 1
     scaled //= divisor
-    part := int.DecZeroed(||scaled, places)
+    part := int.deczeroed(||scaled, places)
 
     ser.char(sign)
-    ser.Dec(||whole)
-    ser.Char (".")
-    ser.Str (part)
+    ser.dec(||whole)
+    ser.char(".")
+    ser.str(part)
 
 PUB Setup{}
 
-    repeat until ser.startrxtx (SER_RX, SER_TX, 0, SER_BAUD)
+    repeat until ser.startrxtx(SER_RX, SER_TX, 0, SER_BAUD)
     time.msleep(30)
     ser.clear{}
     ser.strln(string("Serial terminal started"))
