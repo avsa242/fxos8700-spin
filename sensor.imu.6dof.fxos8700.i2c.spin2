@@ -631,6 +631,39 @@ PUB MagIntThresh(level): curr_thr 'TODO
 '   Any other value polls the chip and returns the current setting
     curr_thr := $00
 
+PUB MagIntThreshX(thresh=-2): curr_thr
+' Set magnetometer interrupt threshold, X-axis
+'   Valid values: 0..32767
+'   Any other value polls the chip and returns the current setting
+    case thresh
+        0..32767:
+            writereg(core#M_THS_X_MSB, 2, @thresh)
+        other:
+            curr_thr := 0
+            readreg(core#M_THS_X_MSB, 2, @curr_thr)
+
+PUB MagIntThreshY(thresh=-2): curr_thr
+' Set magnetometer interrupt threshold, Y-axis
+'   Valid values: 0..32767
+'   Any other value polls the chip and returns the current setting
+    case thresh
+        0..32767:
+            writereg(core#M_THS_Y_MSB, 2, @thresh)
+        other:
+            curr_thr := 0
+            readreg(core#M_THS_Y_MSB, 2, @curr_thr)
+
+PUB MagIntThreshZ(thresh=-2): curr_thr
+' Set magnetometer interrupt threshold, Z-axis
+'   Valid values: 0..32767
+'   Any other value polls the chip and returns the current setting
+    case thresh
+        0..32767:
+            writereg(core#M_THS_Z_MSB, 2, @thresh)
+        other:
+            curr_thr := 0
+            readreg(core#M_THS_Z_MSB, 2, @curr_thr)
+
 PUB MagOpMode(mode): curr_mode 'TODO
 ' Set magnetometer operating mode
 '   Valid values:
