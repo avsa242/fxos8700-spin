@@ -1,12 +1,12 @@
 {
     --------------------------------------------
-    Filename: FXOS8700-Demo.spin
+    Filename: FXOS8700-IntDemo.spin
     Author: Jesse Burt
     Description: Demo of the FXOS8700 driver
         Interrupt functionality
     Copyright (c) 2020
-    Started Sep 19, 2020
-    Updated Sep 27, 2020
+    Started Sep 26, 2020
+    Updated Sep 29, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
