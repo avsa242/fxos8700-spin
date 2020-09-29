@@ -5,7 +5,7 @@
     Description: Driver for the FXOS8700 6DoF IMU
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 27, 2020
+    Updated Sep 29, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -703,21 +703,21 @@ PUB MagThreshInt{}: int_src
 
 PUB MagThreshIntMask(mask): curr_mask
 ' Set magnetometer threshold interrupt mask
-'   Bits: [7..0]
-'       7: Interrupt latch enabled (cleared only by reading MagThreshInt())
-'       6: Logic OR of X, Y, Z interrupts (0: Logic AND)
-'       5: Enable Z-axis threshold interrupt
-'       4: Enable Y-axis threshold interrupt
-'       3: Enable X-axis threshold interrupt
-'       2: Threshold interrupt included when evaluating auto-sleep/wake
+'   Bits: [2..0]
+'       2: Enable Z-axis threshold interrupt
+'       1: Enable Y-axis threshold interrupt
+'       0: Enable X-axis threshold interrupt
 '   Any other value polls the chip and returns the current setting
+    curr_mask := 0
+    readreg(core#M_THS_CFG, 1, @curr_mask)
     case mask
-        0..%11111100:
-            writereg(core#M_THS_CFG, 1, @mask)
+        0..%111:
+            mask <<= core#THS_EFE
         other:
-            curr_mask := 0
-            readreg(core#M_THS_CFG, 1, @curr_mask)
-            return
+            return curr_mask >> core#THS_EFE
+
+    mask := (curr_mask & core#THS_EFE_MASK) | mask
+    writereg(core#M_THS_CFG, 1, @mask)
 
 PUB MagThreshIntsEnabled(enabled): curr_state
 ' Enable magnetometer threshold interrupts

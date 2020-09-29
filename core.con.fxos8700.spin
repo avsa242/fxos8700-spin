@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Sep 19, 2020
-    Updated Sep 27, 2020
+    Updated Sep 29, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -185,14 +185,17 @@ CON
         THS_ZEFE        = 5
         THS_YEFE        = 4
         THS_XEFE        = 3
+        THS_EFE         = 3
         THS_WAKE_EN     = 2
         THS_INT_EN      = 1
         THS_INT_CFG     = 0
+        THS_EFE_BITS    = %111
         THS_ELE_MASK    = (1 << THS_ELE) ^ M_THS_CFG_MASK
         THS_OAE_MASK    = (1 << THS_OAE) ^ M_THS_CFG_MASK
         THS_ZEFE_MASK   = (1 << THS_ZEFE) ^ M_THS_CFG_MASK
         THS_YEFE_MASK   = (1 << THS_YEFE) ^ M_THS_CFG_MASK
         THS_XEFE_MASK   = (1 << THS_XEFE) ^ M_THS_CFG_MASK
+        THS_EFE_MASK    = (THS_EFE_BITS << THS_EFE) ^ M_THS_CFG_MASK
         THS_WAKE_EN_MASK= (1 << THS_WAKE_EN) ^ M_THS_CFG_MASK
         THS_INT_EN_MASK = (1 << THS_INT_EN) ^ M_THS_CFG_MASK
         THS_INT_CFG_MASK= (1 << THS_INT_CFG) ^ M_THS_CFG_MASK
