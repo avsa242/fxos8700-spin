@@ -6,7 +6,7 @@
         Interrupt functionality
     Copyright (c) 2020
     Started Sep 26, 2020
-    Updated Sep 29, 2020
+    Updated Sep 30, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -62,6 +62,7 @@ PUB Main{} | dispmode
     imu.acceldatarate(50)               ' 1, 6, 12, 50, 100, 200, 400, 800
     imu.intmask(%11111111)
 
+    imu.magthreshdebounce(0)
     imu.magintthreshx(2000)             '\
     imu.magintthreshy(2000)             ' - 0..32767 (unsigned)
     imu.magintthreshz(2000)             '/
@@ -188,6 +189,8 @@ PUB MagCalc{} | mx, my, mz
 
     ser.positionx(DATA_INT_COL)
     ser.bin(imu.magthreshint{}, 8)
+    ser.char(" ")
+    ser.bin(imu.magint{}, 3)
     ser.newline{}
 
 PUB MagRaw{} | mx, my, mz
@@ -212,6 +215,8 @@ PUB MagRaw{} | mx, my, mz
 
     ser.positionx(DATA_INT_COL)
     ser.bin(imu.magthreshint{}, 8)
+    ser.char(" ")
+    ser.bin(imu.magint{}, 3)
     ser.newline{}
 
 PUB Temperature{}
@@ -235,25 +240,15 @@ PUB Calibrate{}
 PUB DisplaySettings{} | axo, ayo, azo, mxo, myo, mzo, mthrx, mthry, mthrz
 
     ser.position(0, 3)                  ' Read back the settings from above
-    ser.str(string("AccelScale: "))
-    ser.dec(imu.accelscale(-2))
-    ser.newline{}
-    ser.str(string("AccelDataRate: "))
-    ser.dec(imu.acceldatarate(-2))
-    ser.newline{}
-    ser.str(string("MagScale: "))
-    ser.dec(imu.magscale(-2))
-    ser.newline{}
-    ser.str(string("MagDataRate: "))
-    ser.dec(imu.magdatarate(-2))
-    ser.newline{}
-    ser.str(string("MagDataOverSampling: "))
-    ser.dec(imu.magdataoversampling(-2))
-    ser.newline{}
+    ser.printf(string("AccelScale: %d\n"), imu.accelscale(-2), 0, 0, 0, 0, 0)
+    ser.printf(string("AccelDataRate: %d\n"), imu.acceldatarate(-2), 0, 0, 0, 0, 0)
+    ser.printf(string("MagScale: %d\n"), imu.magscale(-2), 0, 0, 0, 0, 0)
+    ser.printf(string("MagDataRate: %d\n"), imu.magdatarate(-2), 0, 0, 0, 0, 0)
     mthrx := imu.magintthreshx(-2)
     mthry := imu.magintthreshy(-2)
     mthrz := imu.magintthreshz(-2)
     ser.printf(string("MagIntThresh: x: %d y: %d z: %d\n"), mthrx, mthry, mthrz, 0, 0, 0)
+    ser.printf(string("MagThreshDebounce: %d\n"), imu.magthreshdebounce(-2), 0, 0, 0, 0, 0)
 
 PUB DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
 ' Display a scaled up number as a decimal

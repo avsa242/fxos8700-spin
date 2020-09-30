@@ -685,6 +685,19 @@ PUB MagTesla(mx, my, mz) | tmp[3] 'XXX not overflow protected
     long[my] := tmp[Y_AXIS] * MRES_MICROTESLA
     long[mz] := tmp[Z_AXIS] * MRES_MICROTESLA
 
+PUB MagThreshDebounce(nr_samples): curr_set
+' Set number of debounce samples required before magnetometer threshold
+'   interrupt is triggered
+'   Valid values: 0..255
+'   Any other value polls the chip and returns the current setting
+    case nr_samples
+        0..255:
+            writereg(core#M_THS_COUNT, 1, @nr_samples)
+        other:
+            curr_set := 0
+            readreg(core#M_THS_COUNT, 1, @curr_set)
+            return
+
 PUB MagThreshInt{}: int_src
 ' Magnetometer threshold-related interrupt source(s)
 '   Returns: Interrupts that are currently asserted, as a bitmask

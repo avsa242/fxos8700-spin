@@ -14,7 +14,7 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for the NXP FXO
 * Flags to indicate data is ready (accel, mag), has overrun (accel, mag)
 * Automatically or manually set bias offsets (accel, mag)
 * FIFO control and flag reading (set watermark, set circular buffer or FIFO mode, flag if full, number of unread samples)
-* Interrupts: specific events (accel; partial support)
+* Interrupts: specific events (accel; partial support), threshold trigger (mag; partial support)
 
 ## Requirements
 
