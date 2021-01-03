@@ -17,12 +17,10 @@ CON
 
 ' -- User-modifiable constants
     LED         = cfg#LED1
-    SER_RX      = cfg#SER_RX_DEF
-    SER_TX      = cfg#SER_TX_DEF
     SER_BAUD    = 115_200
 
-    I2C_SCL     = cfg#SCL
-    I2C_SDA     = cfg#SDA
+    I2C_SCL     = 28
+    I2C_SDA     = 29
     I2C_HZ      = 400_000
     SL_ADDR_BITS= %11                   ' %00..11 ($1E, 1D, 1C, 1F)
 ' --
@@ -74,7 +72,7 @@ PUB Main{} | dispmode
                 ser.str(string("Halting"))
                 imu.stop{}
                 time.msleep(5)
-                ser.stop
+                ser.stop{}
                 quit
             "c", "C":                   ' Perform calibration
                 calibrate{}
@@ -251,7 +249,7 @@ PUB DisplaySettings{} | axo, ayo, azo, mxo, myo, mzo
     ser.str(string("(z)"))
     ser.newline{}
 
-PUB DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
+PRI DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
 ' Display a scaled up number as a decimal
 '   Scale it back down by divisor (e.g., 10, 100, 1000, etc)
     whole := scaled / divisor
@@ -278,7 +276,7 @@ PUB DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
 
 PUB Setup{}
 
-    repeat until ser.startrxtx(SER_RX, SER_TX, 0, SER_BAUD)
+    ser.start(SER_BAUD)
     time.msleep(30)
     ser.clear{}
     ser.strln(string("Serial terminal started"))

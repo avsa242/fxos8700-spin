@@ -110,6 +110,34 @@ PUB Stop{}
     i2c.terminate{}
 
 PUB Defaults{}
+' Factory default settings
+    accelopmode(STANDBY)
+    opmode(ACCEL)
+
+    acceldatarate(800)
+    accellowpassfilter(false)
+    accelscale(2)
+    fifoenabled(FALSE)
+    fifothreshold(0)
+    intmask(%00000000)
+    magdataoversampling(2)
+    'magdatarate(800)                           ' already set by acceldatarate
+    magintsenabled(FALSE)
+    magintthreshx(0)
+    magintthreshy(0)
+    magintthreshz(0)
+    magthreshdebounce(0)
+    magthreshintmask(%000)
+    magthreshintsenabled(FALSE)
+    tempscale(C)
+
+PUB Preset_AccelMag_on{}
+' Like factory defaults, but with the following changes:
+'   Accelerometer + Magnetometer enabled
+'   Active/measurement mode
+    defaults{}
+    accelopmode(MEASURE)
+    opmode(BOTH)
 
 PUB AccelADCRes(bits): curr_res
 ' dummy method
@@ -167,7 +195,7 @@ PUB AccelDataOverrun{}: flag
 
 PUB AccelDataRate(rate): curr_rate | opmode_orig
 ' Set accelerometer output data rate, in Hz
-'   Valid values: 1(.5625), 6(.25), 12(.5), 50, 100, 200, 400, 800
+'   Valid values: 1(.5625), 6(.25), 12(.5), 50, 100, 200, 400, *800
 '   Any other value polls the chip and returns the current setting
 '   NOTE: If OpMode() is BOTH (3), the set data rate will be halved
 '       (chip limitation)
@@ -207,7 +235,7 @@ PUB AccelInt{}: flag 'TODO
 
 PUB AccelLowPassFilter(state): curr_state | opmode_orig
 ' Enable accelerometer data low-pass filter
-'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Valid values: TRUE (-1 or 1), *FALSE (0)
 '   Any other value polls the chip and returns the current setting
 '   NOTE: This option simply enables a reduced noise mode - it doesn't
 '       provide a LPF cutoff frequency setting, as in other IMUs
@@ -235,7 +263,7 @@ PUB AccelLowPassFilter(state): curr_state | opmode_orig
 PUB AccelOpMode(mode): curr_mode
 ' Set accelerometer operating mode
 '   Valid values:
-'       STANDBY (0): Standby
+'      *STANDBY (0): Standby
 '       MEASURE (1): Measurement mode
 '   Any other value polls the chip and returns the current setting
     curr_mode := 0
@@ -250,7 +278,7 @@ PUB AccelOpMode(mode): curr_mode
 
 PUB AccelScale(g): curr_scale | opmode_orig
 ' Sets the full-scale range of the Accelerometer, in g's
-'   Valid values: 2, 4, 8
+'   Valid values: *2, 4, 8
 '   Any other value polls the chip and returns the current setting
     curr_scale := 0
     readreg(core#XYZ_DATA_CFG, 1, @curr_scale)
@@ -324,7 +352,7 @@ PUB DeviceID{}: id
 
 PUB FIFOEnabled(state): curr_state
 ' Enable FIFO memory
-'   Valid values: FALSE (0), TRUE(1 or -1)
+'   Valid values: *FALSE (0), TRUE(1 or -1)
 '   Any other value polls the chip and returns the current setting
     case ||(state)
         0, 1:
@@ -345,7 +373,7 @@ PUB FIFOFull{}: flag
 PUB FIFOMode(mode): curr_mode | fmode_bypass
 ' Set FIFO behavior
 '   Valid values:
-'       BYPASS (0): FIFO bypassed/disabled
+'      *BYPASS (0): FIFO bypassed/disabled
 '       STREAM (1): FIFO enabled, circular buffer
 '       FIFO (2): FIFO enabled, stop sampling when FIFO full
 '       TRIGGER (3): FIFO enabled, circular buffer. Once triggered, FIFO will
@@ -369,7 +397,7 @@ PUB FIFOMode(mode): curr_mode | fmode_bypass
 
 PUB FIFOThreshold(level): curr_lvl | opmode_orig
 ' Set FIFO watermark/threshold level
-'   Valid values: 0..32
+'   Valid values: 0..32 (default: 0)
 '   Any other value polls the chip and returns the current setting
     curr_lvl := 0
     readreg(core#F_SETUP, 1, @curr_lvl)
@@ -449,6 +477,7 @@ PUB IntMask(mask): curr_mask | opmode_orig
 '           2: Freefall/motion interrupt
 '           1: Acceleration vector-magnitude interrupt
 '           0: Data-ready interrupt
+'           (default: %00000000)
 '   Any other value polls the chip and returns the current setting
     case mask
         0..%11111111:
@@ -512,13 +541,14 @@ PUB MagDataOverSampling(ratio): curr_ratio
 ' Set oversampling ratio for magnetometer output data
 '   Valid values: (dependent upon current MagDataRate())
 '       2, 4, 8, 16, 32, 64, 128, 256, 512, 1024
+'       (default value for each data rate indicated in below tables)
 '   Any other value polls the chip and returns the current setting
     curr_ratio := 0
     readreg(core#M_CTRL_REG1, 1, @curr_ratio)
     case magdatarate(-2)
         1:                                      ' OSR settings available for
             case ratio                          '   1Hz data rate:
-                16, 32, 64, 128, 256, 512, 1024:
+                {*}16, 32, 64, 128, 256, 512, 1024:
                     ratio := lookdownz(ratio: 16, 16, 32, 64, 128, 256, 512, 1024)
                     ratio <<= core#M_OS
                 other:
@@ -526,7 +556,7 @@ PUB MagDataOverSampling(ratio): curr_ratio
                     return lookupz(curr_ratio: 16, 16, 32, 64, 128, 256, 512, 1024)
         6:
             case ratio
-                4, 8, 16, 32, 64, 128, 256:
+                {*}4, 8, 16, 32, 64, 128, 256:
                     ratio := lookdownz(ratio: 4, 4, 8, 16, 32, 64, 128, 256)
                     ratio <<= core#M_OS
                 other:
@@ -534,7 +564,7 @@ PUB MagDataOverSampling(ratio): curr_ratio
                     return lookupz(curr_ratio: 4, 4, 8, 16, 32, 64, 128, 256)
         12:
             case ratio
-                2, 4, 8, 16, 32, 64, 128:
+                {*}2, 4, 8, 16, 32, 64, 128:
                     ratio := lookdownz(ratio: 2, 2, 4, 8, 16, 32, 64, 128)
                     ratio <<= core#M_OS
                 other:
@@ -542,7 +572,7 @@ PUB MagDataOverSampling(ratio): curr_ratio
                     return lookupz(curr_ratio: 2, 2, 4, 8, 16, 32, 64, 128)
         50:
             case ratio
-                2, 4, 8, 16, 32:
+                {*}2, 4, 8, 16, 32:
                     ratio := lookdownz(ratio: 2, 2, 2, 2, 4, 8, 16, 32)
                     ratio <<= core#M_OS
                 other:
@@ -550,7 +580,7 @@ PUB MagDataOverSampling(ratio): curr_ratio
                     return lookupz(curr_ratio: 2, 2, 2, 2, 4, 8, 16, 32)
         100:
             case ratio
-                2, 4, 8, 16:
+                {*}2, 4, 8, 16:
                     ratio := lookdownz(ratio: 2, 2, 2, 2, 2, 4, 8, 16)
                     ratio <<= core#M_OS
                 other:
@@ -558,7 +588,7 @@ PUB MagDataOverSampling(ratio): curr_ratio
                     return lookupz(curr_ratio: 2, 2, 2, 2, 2, 4, 8, 16)
         200:
             case ratio
-                2, 4, 8:
+                {*}2, 4, 8:
                     ratio := lookdownz(ratio: 2, 2, 2, 2, 2, 2, 4, 8)
                     ratio <<= core#M_OS
                 other:
@@ -566,7 +596,7 @@ PUB MagDataOverSampling(ratio): curr_ratio
                     return lookupz(curr_ratio: 2, 2, 2, 2, 2, 2, 4, 8)
         400:
             case ratio
-                2, 4:
+                {*}2, 4:
                     ratio := lookdownz(ratio: 2, 2, 2, 2, 2, 2, 2, 4)
                     ratio <<= core#M_OS
                 other:
@@ -574,7 +604,7 @@ PUB MagDataOverSampling(ratio): curr_ratio
                     return lookupz(curr_ratio: 2, 2, 2, 2, 2, 2, 2, 4)
         800:
             case ratio
-                2:
+                {*}2:
                 other:
                     return 2
 
@@ -583,7 +613,7 @@ PUB MagDataOverSampling(ratio): curr_ratio
 
 PUB MagDataRate(rate): curr_rate
 ' Set Magnetometer Output Data Rate, in Hz
-'   Valid values: 1(.5625), 6(.25), 12(.5), 50, 100, 200, 400, 800
+'   Valid values: 1(.5625), 6(.25), 12(.5), 50, 100, 200, 400, *800
 '   Any other value polls the chip and returns the current setting
 '   NOTE: If OpMode() is BOTH (3), the set data rate will be halved
 '       (chip limitation)
@@ -615,7 +645,7 @@ PUB MagInt{}: magintsrc
 
 PUB MagIntsEnabled(state): curr_state
 ' Enable magnetometer data threshold interrupt
-'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Valid values: TRUE (-1 or 1), *FALSE (0)
 '   Any other value polls the chip and returns the current setting
     curr_state := 0
     readreg(core#M_THS_CFG, 1, @curr_state)
@@ -636,7 +666,7 @@ PUB MagIntThresh(level): curr_thr 'TODO
 
 PUB MagIntThreshX(thresh): curr_thr
 ' Set magnetometer interrupt threshold, X-axis
-'   Valid values: 0..32767
+'   Valid values: 0..32767 (default: 0)
 '   Any other value polls the chip and returns the current setting
     case thresh
         0..32767:
@@ -647,7 +677,7 @@ PUB MagIntThreshX(thresh): curr_thr
 
 PUB MagIntThreshY(thresh): curr_thr
 ' Set magnetometer interrupt threshold, Y-axis
-'   Valid values: 0..32767
+'   Valid values: 0..32767 (default: 0)
 '   Any other value polls the chip and returns the current setting
     case thresh
         0..32767:
@@ -658,7 +688,7 @@ PUB MagIntThreshY(thresh): curr_thr
 
 PUB MagIntThreshZ(thresh): curr_thr
 ' Set magnetometer interrupt threshold, Z-axis
-'   Valid values: 0..32767
+'   Valid values: 0..32767 (default: 0)
 '   Any other value polls the chip and returns the current setting
     case thresh
         0..32767:
@@ -690,7 +720,7 @@ PUB MagTesla(ptr_x, ptr_y, ptr_z) | tmp[3] 'XXX not overflow protected
 PUB MagThreshDebounce(nr_samples): curr_set
 ' Set number of debounce samples required before magnetometer threshold
 '   interrupt is triggered
-'   Valid values: 0..255
+'   Valid values: 0..255 (default: 0)
 '   Any other value polls the chip and returns the current setting
     case nr_samples
         0..255:
@@ -722,6 +752,7 @@ PUB MagThreshIntMask(mask): curr_mask
 '       2: Enable Z-axis threshold interrupt
 '       1: Enable Y-axis threshold interrupt
 '       0: Enable X-axis threshold interrupt
+'       (default: %000)
 '   Any other value polls the chip and returns the current setting
     curr_mask := 0
     readreg(core#M_THS_CFG, 1, @curr_mask)
@@ -734,25 +765,25 @@ PUB MagThreshIntMask(mask): curr_mask
     mask := (curr_mask & core#THS_EFE_MASK) | mask
     writereg(core#M_THS_CFG, 1, @mask)
 
-PUB MagThreshIntsEnabled(enabled): curr_state
+PUB MagThreshIntsEnabled(state): curr_state
 ' Enable magnetometer threshold interrupts
-'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Valid values: TRUE (-1 or 1), *FALSE (0)
 '   Any other value polls the chip and returns the current setting
     curr_state := 0
     readreg(core#M_THS_CFG, 1, @curr_state)
-    case ||(enabled)
+    case ||(state)
         0, 1:
-            enabled := ||(enabled) << core#THS_INT_EN
+            state := ||(state) << core#THS_INT_EN
         other:
             return ((curr_state >> core#THS_INT_EN) & 1) == 1
 
-    enabled := ((curr_state & core#THS_INT_EN_MASK) | enabled) & core#M_THS_CFG_MASK
-    writereg(core#M_THS_CFG, 1, @enabled)
+    state := ((curr_state & core#THS_INT_EN_MASK) | state) & core#M_THS_CFG_MASK
+    writereg(core#M_THS_CFG, 1, @state)
 
 PUB OpMode(mode): curr_mode
 ' Set operating mode
 '   Valid values:
-'       ACCEL (0): Accelerometer only
+'      *ACCEL (0): Accelerometer only
 '       MAG (1): Magnetometer only
 '       BOTH (3): Both sensors active
 '   Any other value polls the chip and returns the current setting
@@ -792,7 +823,7 @@ PUB TempDataReady{}: flag
 PUB TempScale(scale): curr_scale
 ' Set temperature scale used by Temperature method
 '   Valid values:
-'       C (0): Celsius
+'      *C (0): Celsius
 '       F (1): Fahrenheit
 '   Any other value returns the current setting
     case scale
