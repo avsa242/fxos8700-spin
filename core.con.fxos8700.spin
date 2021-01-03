@@ -3,9 +3,9 @@
     Filename: core.con.fxos8700.spin
     Author: Jesse Burt
     Description: Low-level constants
-    Copyright (c) 2020
+    Copyright (c) 2021
     Started Sep 19, 2020
-    Updated Sep 29, 2020
+    Updated Jan 3, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -132,7 +132,7 @@ CON
         DR_MASK         = (DR_BITS << DR) ^ CTRL_REG1_MASK
         LNOISE_MASK     = (1 << LNOISE) ^ CTRL_REG1_MASK
         F_READ_MASK     = (1 << F_READ) ^ CTRL_REG1_MASK
-        ACTIVE_MASK     = ASLP_RATE_BITS ^ CTRL_REG1_MASK
+        ACTIVE_MASK     = 1 ^ CTRL_REG1_MASK
 
     CTRL_REG2           = $2B
     CTRL_REG3           = $2C
