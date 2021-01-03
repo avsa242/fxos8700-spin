@@ -3,9 +3,9 @@
     Filename: FXOS8700-Demo.spin
     Author: Jesse Burt
     Description: Demo of the FXOS8700 driver
-    Copyright (c) 2020
+    Copyright (c) 2021
     Started Sep 19, 2020
-    Updated Sep 27, 2020
+    Updated Jan 3, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -25,95 +25,51 @@ CON
     SL_ADDR_BITS= %11                   ' %00..11 ($1E, 1D, 1C, 1F)
 ' --
 
-    DATA_X_COL  = 20
+    DATA_X_COL  = 10
     DATA_Y_COL  = DATA_X_COL+12
     DATA_Z_COL  = DATA_Y_COL+12
-    DATA_OVR_COL= DATA_Z_COL+12
 
 ' Temperature scales
     C           = 0
     F           = 1
     K           = 2
 
-VAR
-
-    long _accel_overruns, _mag_overruns
-
 OBJ
 
-    cfg : "core.con.boardcfg.flip"      ' Clock setup, I/O pins, etc
+    cfg : "core.con.boardcfg.flip"
     ser : "com.serial.terminal.ansi"
     time: "time"
     imu : "sensor.imu.6dof.fxos8700.i2c"
     int : "string.integer"
 
-PUB Main{} | dispmode
+PUB Main{}
 
     setup{}
-    imu.opmode(imu#BOTH)
+    imu.preset_accelmag_on{}
     imu.tempscale(C)
-    imu.accelopmode(imu#MEASURE)
-    imu.accellowpassfilter(false)
-    imu.accelscale(2)                   ' 2, 4, 8 (g's)
-    imu.acceldatarate(50)               ' 1, 6, 12, 50, 100, 200, 400, 800
-    imu.accelbias(0, 0, 0, 1)           ' x, y, z: -128..127, rw: 0/1 (R/W)
 
-    imu.magbias(0, 0, 0, 1)             ' x, y, z: -16384..16383, rw: 0/1 (R/W)
-    imu.magdataoversampling(2)          ' 2..1024 (powers of 2)
-                                        ' (dependent upon data rate)
     ser.hidecursor{}
-    dispmode := 0
 
-    displaysettings{}
     repeat
-        case ser.rxcheck{}
-            "q", "Q":                   ' Quit the demo
-                ser.position(0, 15)
-                ser.str(string("Halting"))
-                imu.stop{}
-                time.msleep(5)
-                ser.stop{}
-                quit
-            "c", "C":                   ' Perform calibration
-                calibrate{}
-                displaysettings{}
-            "r", "R":                   ' Change display mode: raw/calculated
-                ser.position(0, 15)
-                repeat 2
-                    ser.clearline{}
-                    ser.newline{}
-                dispmode ^= 1
-
-        ser.position (DATA_X_COL, 15)
-        ser.char("X")
-        ser.position (DATA_Y_COL, 15)
-        ser.char("Y")
-        ser.position (DATA_Z_COL, 15)
-        ser.char("Z")
-        ser.position (DATA_OVR_COL, 15)
-        ser.str(string("Overruns:"))
+        ser.position(0, 3)
+        accelcalc{}
         ser.newline{}
-        case dispmode
-            0:
-                accelraw{}
-                magraw{}
-                temperature{}
-            1:
-                accelcalc{}
-                magcalc{}
-                temperature{}
+        magcalc{}
+        ser.newline{}
+        temperature{}
+        if ser.rxcheck{} == "c"                 ' press 'c' to perform an
+            calibrate{}                         '   offset calibration
+
     ser.showcursor{}
 
 PUB AccelCalc{} | ax, ay, az
 
-    repeat until imu.acceldataready{}
-    imu.accelg (@ax, @ay, @az)
-    if imu.acceldataoverrun{}
-        _accel_overruns++
-    ser.str(string("accel g: "))
+    repeat until imu.acceldataready{}           ' wait for sensor to be ready
+    imu.accelg(@ax, @ay, @az)                   ' read the new data
+    ser.str(string("Accel g: "))
 
-    ser.positionx(DATA_X_COL)
-    decimaldot(ax, 1_000_000)
+    ser.positionx(DATA_X_COL)                   ' data is in micro-g's, so
+    decimaldot(ax, 1_000_000)                   ' format it as a decimal
 
     ser.positionx(DATA_Y_COL)
     decimaldot(ay, 1_000_000)
@@ -121,38 +77,11 @@ PUB AccelCalc{} | ax, ay, az
     ser.positionx(DATA_Z_COL)
     decimaldot(az, 1_000_000)
 
-    ser.positionx(DATA_OVR_COL)
-    ser.dec (_accel_overruns)
-    ser.newline{}
-
-PUB AccelRaw{} | ax, ay, az
-
-    repeat until imu.acceldataready{}
-    imu.acceldata(@ax, @ay, @az)
-    if imu.acceldataoverrun{}
-        _accel_overruns++
-    ser.str(string("accel:   "))
-
-    ser.positionx(DATA_X_COL)
-    ser.str(int.decpadded(ax, 9))
-
-    ser.positionx(DATA_Y_COL)
-    ser.str(int.decpadded(ay, 9))
-
-    ser.positionx(DATA_Z_COL)
-    ser.str(int.decpadded(az, 9))
-
-    ser.positionx(DATA_OVR_COL)
-    ser.dec (_accel_overruns)
-    ser.newline{}
-
 PUB MagCalc{} | mx, my, mz
 
     repeat until imu.magdataready{}
     imu.maggauss(@mx, @my, @mz)
-    if imu.magdataoverrun{}
-        _mag_overruns++
-    ser.str(string("mag Gs: "))
+    ser.str(string("Mag Gs: "))
 
     ser.positionx(DATA_X_COL)
     decimaldot(mx, 1_000_000)
@@ -163,34 +92,9 @@ PUB MagCalc{} | mx, my, mz
     ser.positionx(DATA_Z_COL)
     decimaldot(mz, 1_000_000)
 
-    ser.positionx(DATA_OVR_COL)
-    ser.dec (_mag_overruns)
-    ser.newline{}
-
-PUB MagRaw{} | mx, my, mz
-
-    repeat until imu.magdataready{}
-    imu.magdata(@mx, @my, @mz)
-    if imu.magdataoverrun{}
-        _mag_overruns++
-    ser.str(string("mag:   "))
-
-    ser.positionx(DATA_X_COL)
-    ser.str(int.decpadded(mx, 9))
-
-    ser.positionx(DATA_Y_COL)
-    ser.str(int.decpadded(my, 9))
-
-    ser.positionx(DATA_Z_COL)
-    ser.str(int.decpadded(mz, 9))
-
-    ser.positionx(DATA_OVR_COL)
-    ser.dec (_mag_overruns)
-    ser.newline{}
-
 PUB Temperature{}
 
-    ser.str(string("temp:"))
+    ser.str(string("Temp:"))
 
     ser.positionx(DATA_X_COL)
     decimaldot(imu.temperature{}, 100)
@@ -199,55 +103,12 @@ PUB Temperature{}
 
 PUB Calibrate{}
 
-    ser.position(0, 12)
+    ser.position(0, 7)
     ser.str(string("Calibrating..."))
     imu.calibrateaccel{}
     imu.calibratemag{}
-    ser.position(0, 12)
-    ser.str(string("              "))
-
-PUB DisplaySettings{} | axo, ayo, azo, mxo, myo, mzo
-
-    ser.position(0, 3)                  ' Read back the settings from above
-    ser.str(string("AccelOpMode: "))
-    ser.dec(imu.accelopmode(-2))
-    ser.newline
-    ser.str(string("AccelScale: "))
-    ser.dec(imu.accelscale(-2))
-    ser.newline{}
-    imu.accelbias(@axo, @ayo, @azo, 0)
-    ser.str(string("AccelBias: "))
-    ser.dec(axo)
-    ser.str(string("(x), "))
-    ser.dec(ayo)
-    ser.str(string("(y), "))
-    ser.dec(azo)
-    ser.str(string("(z)"))
-    ser.newline{}
-    ser.str(string("AccelDataRate: "))
-    ser.dec(imu.acceldatarate(-2))
-    ser.newline{}
-    ser.str(string("MagScale: "))
-    ser.dec(imu.magscale(-2))
-    ser.newline{}
-    ser.str(string("MagDataRate: "))
-    ser.dec(imu.magdatarate(-2))
-    ser.newline{}
-    ser.str(string("MagDataOverSampling: "))
-    ser.dec(imu.magdataoversampling(-2))
-    ser.newline{}
-'    ser.str(string("MagOpMode: "))
-'    ser.dec(imu.magopmode(-2))
-'    ser.newline{}
-    imu.magbias(@mxo, @myo, @mzo, 0)
-    ser.str(string("MagBias: "))
-    ser.dec(mxo)
-    ser.str(string("(x), "))
-    ser.dec(myo)
-    ser.str(string("(y), "))
-    ser.dec(mzo)
-    ser.str(string("(z)"))
-    ser.newline{}
+    ser.position(0, 7)
+    ser.clearline{}
 
 PRI DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
 ' Display a scaled up number as a decimal
@@ -267,10 +128,10 @@ PRI DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
         places++
     until tmp == 1
     scaled //= divisor
-    part := int.deczeroed(||scaled, places)
+    part := int.deczeroed(||(scaled), places)
 
     ser.char(sign)
-    ser.dec(||whole)
+    ser.dec(||(whole))
     ser.char(".")
     ser.str(part)
 
