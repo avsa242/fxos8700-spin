@@ -5,7 +5,7 @@
     Description: Driver for the FXOS8700 6DoF IMU
     Copyright (c) 2021
     Started Sep 19, 2020
-    Updated May 16, 2021
+    Updated Nov 16, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -640,6 +640,24 @@ PUB MagInt(): magintsrc
 '           0: Magnetic data-ready interrupt
     magintsrc := 0
     readreg(core#M_INT_SRC, 1, @magintsrc)
+
+PUB MagIntRouting(mask): curr_mask
+' Set routing of interrupt sources to INT1 or INT2 pin
+'   Valid values:
+'       Setting a bit routes the interrupt to INT1
+'       Clearing a bit routes the interrupt to INT2
+'
+'       Bits [0]
+'       0: Magnetometer threshold interrupt
+    curr_mask := 0
+    readreg(core.M_THS_CFG, 1, @curr_mask)
+    case mask
+        0, 1:
+        other:
+            return (curr_mask & 1)
+
+    mask := ((curr_mask & core.THS_INT_CFG_MASK) | mask)
+    writereg(core.M_THS_CFG, 1, @mask)
 
 PUB MagIntsEnabled(state): curr_state
 ' Enable magnetometer data threshold interrupt
