@@ -681,37 +681,43 @@ PUB MagIntThresh(level): curr_thr 'TODO
     curr_thr := 0
 
 PUB MagIntThreshX(thresh=-2): curr_thr
-' Set magnetometer interrupt threshold, X-axis
-'   Valid values: 0..32767 (default: 0)
+' Set magnetometer interrupt X-axis threshold, in micro-Gauss
+'   Valid values: 0..32_767000 (0..32.767Gs, default: 0)
 '   Any other value polls the chip and returns the current setting
     case thresh
-        0..32767:
-            writereg(core#M_THS_X_MSB, 2, @thresh)
+        0..32_767000:
+            thresh /= 1000                      ' LSB = 0.1uT or 0.001Gs
+            writereg(core.M_THS_X_MSB, 2, @thresh)
         other:
             curr_thr := 0
-            readreg(core#M_THS_X_MSB, 2, @curr_thr)
+            readreg(core.M_THS_X_MSB, 2, @curr_thr)
+            return curr_thr * 1000
 
 PUB MagIntThreshY(thresh=-2): curr_thr
-' Set magnetometer interrupt threshold, Y-axis
-'   Valid values: 0..32767 (default: 0)
+' Set magnetometer interrupt Y-axis threshold, in micro-Gauss
+'   Valid values: 0..32_767000 (0..32.767Gs, default: 0)
 '   Any other value polls the chip and returns the current setting
     case thresh
-        0..32767:
-            writereg(core#M_THS_Y_MSB, 2, @thresh)
+        0..32_767000:
+            thresh /= 1000                      ' LSB = 0.1uT or 0.001Gs
+            writereg(core.M_THS_Y_MSB, 2, @thresh)
         other:
             curr_thr := 0
-            readreg(core#M_THS_Y_MSB, 2, @curr_thr)
+            readreg(core.M_THS_Y_MSB, 2, @curr_thr)
+            return curr_thr * 1000
 
 PUB MagIntThreshZ(thresh=-2): curr_thr
-' Set magnetometer interrupt threshold, Z-axis
-'   Valid values: 0..32767 (default: 0)
+' Set magnetometer interrupt Z-axis threshold, in micro-Gauss
+'   Valid values: 0..32_767000 (0..32.767Gs, default: 0)
 '   Any other value polls the chip and returns the current setting
     case thresh
-        0..32767:
-            writereg(core#M_THS_Z_MSB, 2, @thresh)
+        0..32_767000:
+            thresh /= 1000                      ' LSB = 0.1uT or 0.001Gs
+            writereg(core.M_THS_Z_MSB, 2, @thresh)
         other:
             curr_thr := 0
-            readreg(core#M_THS_Z_MSB, 2, @curr_thr)
+            readreg(core.M_THS_Z_MSB, 2, @curr_thr)
+            return curr_thr * 1000
 
 PUB MagOpMode(mode): curr_mode 'TODO
 ' Set magnetometer operating mode
