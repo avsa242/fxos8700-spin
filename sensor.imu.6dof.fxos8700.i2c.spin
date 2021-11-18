@@ -498,9 +498,9 @@ PUB MagBias(bias_x, bias_y, bias_z, rw) | tmp[2]
 ' Read or write/manually set magnetometer calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
-'           ptr_x, ptr_y, ptr_z: -16384..16384
+'           bias_x, bias_y, bias_z: -16384..16384
 '       When rw == R (0, read)
-'           ptr_x, ptr_y, ptr_z:
+'           bias_x, bias_y, bias_z:
 '               Pointers to variables to hold current settings for respective
 '               axes
 '   NOTE: When writing new offsets, any values outside of the range
