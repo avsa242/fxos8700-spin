@@ -641,6 +641,20 @@ PUB MagInt(): magintsrc
     magintsrc := 0
     readreg(core#M_INT_SRC, 1, @magintsrc)
 
+PUB MagIntPersistence(cycles): curr_cyc
+' Set interrupt persistence, in cycles
+'   Defines how many consecutive measurements must be outside the interrupt threshold
+'   before an interrupt is actually triggered (e.g., to reduce false positives)
+'   Valid values:
+'       0..255
+'   Any other value polls the device and returns the current setting
+    case cycles
+        0..255:
+            writereg(core.M_THS_COUNT, 1, @cycles)
+        other:
+            curr_cyc := 0
+            readreg(core.M_THS_COUNT, 1, @curr_cyc)
+
 PUB MagIntRouting(mask): curr_mask
 ' Set routing of interrupt sources to INT1 or INT2 pin
 '   Valid values:
@@ -673,20 +687,6 @@ PUB MagIntsEnabled(state): curr_state
 
     state := ((curr_state & core.THS_INT_EN_MASK) | state) & core.M_THS_CFG_MASK
     writereg(core.M_THS_CFG, 1, @state)
-
-PUB MagIntPersistence(cycles): curr_cyc
-' Set interrupt persistence, in cycles
-'   Defines how many consecutive measurements must be outside the interrupt threshold
-'   before an interrupt is actually triggered (e.g., to reduce false positives)
-'   Valid values:
-'       0..255
-'   Any other value polls the device and returns the current setting
-    case cycles
-        0..255:
-            writereg(core.M_THS_COUNT, 1, @cycles)
-        other:
-            curr_cyc := 0
-            readreg(core.M_THS_COUNT, 1, @curr_cyc)
 
 PUB MagIntThresh(level): curr_thr 'TODO
 ' Set magnetometer interrupt threshold
