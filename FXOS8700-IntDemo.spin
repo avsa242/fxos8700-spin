@@ -4,9 +4,9 @@
     Author: Jesse Burt
     Description: Demo of the FXOS8700 driver
         Interrupt functionality
-    Copyright (c) 2020
+    Copyright (c) 2021
     Started Sep 26, 2020
-    Updated Sep 30, 2020
+    Updated Nov 18, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -18,14 +18,14 @@ CON
 
 ' -- User-modifiable constants
     LED         = cfg#LED1
-    SER_RX      = cfg#SER_RX_DEF
-    SER_TX      = cfg#SER_TX_DEF
     SER_BAUD    = 115_200
 
-    I2C_SCL     = cfg#SCL
-    I2C_SDA     = cfg#SDA
+    I2C_SCL     = 28
+    I2C_SDA     = 29
     I2C_HZ      = 400_000
-    SL_ADDR_BITS= %11                   ' %00..11 ($1E, 1D, 1C, 1F)
+    ADDR_BITS   = %11                           ' %00..%11 ($1E, 1D, 1C, 1F)
+
+    RES_PIN     = -1                            ' reset optional: -1 to disable
 ' --
 
     DATA_X_COL  = 20
@@ -62,10 +62,10 @@ PUB Main{} | dispmode
     imu.acceldatarate(50)               ' 1, 6, 12, 50, 100, 200, 400, 800
     imu.intmask(%11111111)
 
-    imu.magthreshdebounce(0)
-    imu.magintthreshx(2000)             '\
-    imu.magintthreshy(2000)             ' - 0..32767 (unsigned)
-    imu.magintthreshz(2000)             '/
+    imu.magintpersistence(0)
+    imu.magintthreshx(2_000000)         '\
+    imu.magintthreshy(2_000000)         ' - 0..32_767000 (microGauss, unsigned)
+    imu.magintthreshz(2_000000)         '/
                                         ' *NOTE: The chip doesn't account for
                                         ' bias offsets when comparing the
                                         ' set thresholds to the measurement
@@ -103,11 +103,10 @@ PUB Main{} | dispmode
         ser.char("Y")
         ser.position(DATA_Z_COL, 15)
         ser.char("Z")
-        ser.position (DATA_OVR_COL, 15)
+        ser.position(DATA_OVR_COL, 15)
         ser.str(string("Overruns:"))
         ser.position(DATA_INT_COL, 15)
         ser.strln(string("Interrupt:"))
-        ser.newline{}
         case dispmode
             0:
                 accelraw{}
@@ -137,7 +136,7 @@ PUB AccelCalc{} | ax, ay, az
     decimaldot(az, 1_000_000)
 
     ser.positionx(DATA_OVR_COL)
-    ser.dec (_accel_overruns)
+    ser.dec(_accel_overruns)
 
     ser.positionx(DATA_INT_COL)
     ser.bin(imu.interrupt{}, 8)
@@ -161,7 +160,7 @@ PUB AccelRaw{} | ax, ay, az
     ser.str(int.decpadded(az, 9))
 
     ser.positionx(DATA_OVR_COL)
-    ser.dec (_accel_overruns)
+    ser.dec(_accel_overruns)
 
     ser.positionx(DATA_INT_COL)
     ser.bin(imu.interrupt{}, 8)
@@ -185,7 +184,7 @@ PUB MagCalc{} | mx, my, mz
     decimaldot(mz, 1_000_000)
 
     ser.positionx(DATA_OVR_COL)
-    ser.dec (_mag_overruns)
+    ser.dec(_mag_overruns)
 
     ser.positionx(DATA_INT_COL)
     ser.bin(imu.magthreshint{}, 8)
@@ -211,7 +210,7 @@ PUB MagRaw{} | mx, my, mz
     ser.str(int.decpadded(mz, 9))
 
     ser.positionx(DATA_OVR_COL)
-    ser.dec (_mag_overruns)
+    ser.dec(_mag_overruns)
 
     ser.positionx(DATA_INT_COL)
     ser.bin(imu.magthreshint{}, 8)
@@ -239,16 +238,16 @@ PUB Calibrate{}
 
 PUB DisplaySettings{} | axo, ayo, azo, mxo, myo, mzo, mthrx, mthry, mthrz
 
-    ser.position(0, 3)                  ' Read back the settings from above
-    ser.printf(string("AccelScale: %d\n"), imu.accelscale(-2), 0, 0, 0, 0, 0)
-    ser.printf(string("AccelDataRate: %d\n"), imu.acceldatarate(-2), 0, 0, 0, 0, 0)
-    ser.printf(string("MagScale: %d\n"), imu.magscale(-2), 0, 0, 0, 0, 0)
-    ser.printf(string("MagDataRate: %d\n"), imu.magdatarate(-2), 0, 0, 0, 0, 0)
+    ser.position(0, 3)                          ' Read back settings
+    ser.printf1(string("AccelScale: %d\n"), imu.accelscale(-2))
+    ser.printf1(string("AccelDataRate: %d\n"), imu.acceldatarate(-2))
+    ser.printf1(string("MagScale: %d\n"), imu.magscale(-2))
+    ser.printf1(string("MagDataRate: %d\n"), imu.magdatarate(-2))
     mthrx := imu.magintthreshx(-2)
     mthry := imu.magintthreshy(-2)
     mthrz := imu.magintthreshz(-2)
-    ser.printf(string("MagIntThresh: x: %d y: %d z: %d\n"), mthrx, mthry, mthrz, 0, 0, 0)
-    ser.printf(string("MagThreshDebounce: %d\n"), imu.magthreshdebounce(-2), 0, 0, 0, 0, 0)
+    ser.printf3(string("MagIntThresh: x: %d y: %d z: %d\n"), mthrx, mthry, mthrz)
+    ser.printf1(string("MagIntPersistence: %d\n"), imu.magintpersistence(-2))
 
 PUB DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
 ' Display a scaled up number as a decimal
@@ -277,18 +276,16 @@ PUB DecimalDot(scaled, divisor) | whole[4], part[4], places, tmp, sign
 
 PUB Setup{}
 
-    repeat until ser.startrxtx(SER_RX, SER_TX, 0, SER_BAUD)
+    ser.start(SER_BAUD)
     time.msleep(30)
     ser.clear{}
     ser.strln(string("Serial terminal started"))
 
-    if imu.startx(I2C_SCL, I2C_SDA, I2C_HZ, SL_ADDR_BITS)
+    if imu.startx(I2C_SCL, I2C_SDA, I2C_HZ, ADDR_BITS, RES_PIN)
         ser.strln(string("FXOS8700 driver started"))
     else
         ser.strln(string("FXOS8700 driver failed to start - halting"))
-        imu.stop{}
-        time.msleep(50)
-        ser.stop{}
+        repeat
 
 DAT
 {

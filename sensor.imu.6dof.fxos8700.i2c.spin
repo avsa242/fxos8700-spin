@@ -77,23 +77,27 @@ VAR
     long _ares, _abiasraw[3]
     long _mres, _mbiasraw[3]
     byte _slave_addr, _temp_scale
+    byte _RES
 
 PUB Null{}
 ' This is not a top-level object
 
 PUB Start{}
 ' Start using "standard" Propeller I2C pins and 100kHz, default slave address
-    startx(DEF_SCL, DEF_SDA, DEF_HZ, %00)
+'   NOTE: Starts with no reset pin defined
+    startx(DEF_SCL, DEF_SDA, DEF_HZ, %00, -1)
 
-PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, SL_ADDR_BITS): status
+PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS, RES_PIN): status
 ' Start using custom pins, I2C bus freq, slave address bits
+'   NOTE: RES_PIN is optional; specify -1, if unused
     if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and {
 }   I2C_HZ =< core#I2C_MAX_FREQ
         if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
+            _RES := RES_PIN
             time.usleep(core#TPOR)
             ' Unfortunately, the chip's mapping of SAx bits to the slave address isn't
             '   logical, so to work around it, determine it conditionally:
-            case SL_ADDR_BITS
+            case ADDR_BITS
                 %00: _slave_addr := core#SLAVE_ADDR_1E
                 %01: _slave_addr := core#SLAVE_ADDR_1D
                 %10: _slave_addr := core#SLAVE_ADDR_1C
@@ -181,7 +185,7 @@ PUB AccelClearInt{} | tmp   ' TODO
     tmp := 0
 
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
-' Reptr_ds the Accelerometer output registers
+' Reads the Accelerometer output registers
     readreg(core#OUT_X_MSB, 6, @tmp)
     long[ptr_x] := ~~tmp.word[2]                ' signed 16-bit
     long[ptr_y] := ~~tmp.word[1]
@@ -825,6 +829,19 @@ PUB OpMode(mode): curr_mode
 
     mode := ((curr_mode & core#M_HMS_MASK) | mode) & core#M_CTRL_REG1_MASK
     writereg(core#M_CTRL_REG1, 1, @mode)
+
+PUB Reset{} | tmp
+' Perform hard or soft-reset
+    if lookdown(_RES: 0..31)
+        outa[_RES] := 0
+        dira[_RES] := 1
+        outa[_RES] := 1
+        time.usleep(core#TPOR)
+        outa[_RES] := 0
+    else
+        tmp := core#SRESET
+        writereg(core#CTRL_REG2, 1, @tmp)
+        time.usleep(core#TPOR)
 
 PUB Temperature{}: temp
 ' Read chip temperature

@@ -2,10 +2,10 @@
     --------------------------------------------
     Filename: core.con.fxos8700.spin
     Author: Jesse Burt
-    Description: Low-level constants
+    Description: FXOS8700-specific constants
     Copyright (c) 2021
     Started Sep 19, 2020
-    Updated Jan 3, 2021
+    Updated Nov 18, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -135,6 +135,21 @@ CON
         ACTIVE_MASK     = 1 ^ CTRL_REG1_MASK
 
     CTRL_REG2           = $2B
+    CTRL_REG2_MASK      = $DF
+        ST              = 7
+        RST             = 6
+        SMODS           = 3
+        SLPE            = 2
+        MODS            = 0
+        SMODS_BITS      = %11
+        MODS_BITS       = %11
+        ST_MASK         = (1 << ST) ^ CTRL_REG2_MASK
+        RST_MASK        = (1 << RST) ^ CTRL_REG2_MASK
+        SMODS_MASK      = (SMODS_BITS << SMODS) ^ CTRL_REG2_MASK
+        SLPE_MASK       = (1 << SLPE) ^ CTRL_REG2_MASK
+        MODS_MASK       = MODS_BITS ^ CTRL_REG2_MASK
+        SRESET          = (1 << RST)
+
     CTRL_REG3           = $2C
     CTRL_REG4           = $2D
     CTRL_REG5           = $2E
