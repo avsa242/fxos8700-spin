@@ -5,7 +5,7 @@
     Description: FXOS8700-specific constants
     Copyright (c) 2021
     Started Sep 19, 2020
-    Updated Nov 18, 2021
+    Updated Nov 19, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -92,7 +92,16 @@ CON
         HPF_OUT_MASK    = (1 << HPF_OUT) ^ XYZ_DATA_CFG_MASK
         FS_MASK         = FS_BITS ^ XYZ_DATA_CFG_MASK
 
-    HP_FILTER_CUTOFF    = $0F
+    HP_FILT_CUTOFF      = $0F
+    HP_FILT_CUTOFF_MASK = $33
+        PLS_HPF_BYP     = 5
+        PLS_LPF_EN      = 4
+        SEL             = 0
+        SEL_BITS        = %11
+        PLS_HPF_BYP_MASK= (1 << PLS_HPF_BYP) ^ HP_FILT_CUTOFF_MASK
+        PLS_LPF_EN_MASK = (1 << PLS_LPF_EN) ^ HP_FILT_CUTOFF_MASK
+        SEL_MASK        = SEL_BITS ^ HP_FILT_CUTOFF_MASK
+
     PL_STATUS           = $10
     PL_CFG              = $11
     PL_COUNT            = $12
@@ -109,7 +118,28 @@ CON
     TRANSIENT_SRC       = $1E
     TRANSIENT_THS       = $1F
     TRANSIENT_COUNT     = $20
+
     PULSE_CFG           = $21
+    PULSE_CFG_MASK      = $FF
+        DPA             = 7
+        ELE             = 6
+        ZDPEFE          = 5
+        ZSPEFE          = 4
+        YDPEFE          = 3
+        YSPEFE          = 2
+        XDPEFE          = 1
+        XSPEFE          = 0
+        PEFE_BITS       = %111111
+        DPA_MASK        = (1 << DPA) ^ PULSE_CFG_MASK
+        ELE_MASK        = (1 << ELE) ^ PULSE_CFG_MASK
+        ZDPEFE_MASK     = (1 << ZDPEFE) ^ PULSE_CFG_MASK
+        ZSPEFE_MASK     = (1 << ZSPEFE) ^ PULSE_CFG_MASK
+        YDPEFE_MASK     = (1 << YDPEFE) ^ PULSE_CFG_MASK
+        YSPEFE_MASK     = (1 << YSPEFE) ^ PULSE_CFG_MASK
+        XDPEFE_MASK     = (1 << XDPEFE) ^ PULSE_CFG_MASK
+        XSPEFE_MASK     = (1 << XSPEFE) ^ PULSE_CFG_MASK
+        PEFE_MASK       = PEFE_BITS ^ PULSE_CFG_MASK
+
     PULSE_SRC           = $22
     PULSE_THSX          = $23
     PULSE_THSY          = $24
@@ -152,7 +182,10 @@ CON
 
     CTRL_REG3           = $2C
     CTRL_REG4           = $2D
+
     CTRL_REG5           = $2E
+    CTRL_REG5_MASK      = $BD
+
     OFF_X               = $2F
     OFF_Y               = $30
     OFF_Z               = $31

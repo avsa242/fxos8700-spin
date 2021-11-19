@@ -12,59 +12,67 @@
 
 CON
 
-    SLAVE_WR                = core#SLAVE_ADDR
-    SLAVE_RD                = core#SLAVE_ADDR|1
+    SLAVE_WR        = core#SLAVE_ADDR
+    SLAVE_RD        = core#SLAVE_ADDR|1
 
-    DEF_SCL                 = 28
-    DEF_SDA                 = 29
-    DEF_HZ                  = 100_000
-    I2C_MAX_FREQ            = core#I2C_MAX_FREQ
+    DEF_SCL         = 28
+    DEF_SDA         = 29
+    DEF_HZ          = 100_000
+    I2C_MAX_FREQ    = core#I2C_MAX_FREQ
 
 ' Indicate to user apps how many Degrees of Freedom each sub-sensor has
 '   (also imply whether or not it has a particular sensor)
-    ACCEL_DOF               = 3
-    GYRO_DOF                = 0
-    MAG_DOF                 = 3
-    BARO_DOF                = 0
-    DOF                     = ACCEL_DOF + GYRO_DOF + MAG_DOF + BARO_DOF
+    ACCEL_DOF       = 3
+    GYRO_DOF        = 0
+    MAG_DOF         = 3
+    BARO_DOF        = 0
+    DOF             = ACCEL_DOF + GYRO_DOF + MAG_DOF + BARO_DOF
 
 ' Magnetometer scaling
-    MRES_GAUSS              = 1000
-    MRES_MICROTESLA         = 100000
+    MRES_GAUSS      = 1000
+    MRES_MICROTESLA = 100000
 
 ' Bias adjustment (AccelBias(), GyroBias(), MagBias()) read or write
-    R                       = 0
-    W                       = 1
+    R               = 0
+    W               = 1
 
 ' Axis-specific constants
-    X_AXIS                  = 0
-    Y_AXIS                  = 1
-    Z_AXIS                  = 2
-    ALL_AXIS                = 3
+    X_AXIS          = 0
+    Y_AXIS          = 1
+    Z_AXIS          = 2
+    ALL_AXIS        = 3
 
 ' Temperature scale constants
-    C                       = 0
-    F                       = 1
-    K                       = 2
+    C               = 0
+    F               = 1
+    K               = 2
 
 ' Endian constants
-    LITTLE                  = 0
-    BIG                     = 1
+    LITTLE          = 0
+    BIG             = 1
 
 ' FIFO modes
-    BYPASS                  = 0
-    STREAM                  = 1
-    FIFO                    = 2
-    TRIGGER                 = 3
+    BYPASS          = 0
+    STREAM          = 1
+    FIFO            = 2
+    TRIGGER         = 3
 
 ' Accel Operating modes
-    STANDBY                 = 0
-    MEASURE                 = 1
+    STDBY           = 0
+    ACTIVE          = 1
 
 ' Operating modes
-    ACCEL                   = 0
-    MAG                     = 1
-    BOTH                    = 3
+    ACCEL           = 0
+    MAG             = 1
+    BOTH            = 3
+
+' Interrupt sources
+    INT_AUTOSLPWAKE = 1 << 7
+    INT_TRANS       = 1 << 5
+    INT_ORIENT      = 1 << 4
+    INT_PULSE       = 1 << 3
+    INT_FFALL       = 1 << 2
+    INT_DRDY        = 1
 
 OBJ
 
@@ -77,6 +85,7 @@ VAR
     long _ares, _abiasraw[3]
     long _mres, _mbiasraw[3]
     byte _slave_addr, _temp_scale
+    byte _opmode_orig
     byte _RES
 
 PUB Null{}
@@ -118,7 +127,7 @@ PUB Stop{}
 
 PUB Defaults{}
 ' Factory default settings
-    accelopmode(STANDBY)
+    accelopmode(STDBY)
     opmode(ACCEL)
 
     acceldatarate(800)
@@ -143,8 +152,24 @@ PUB Preset_Active{}
 '   Accelerometer + Magnetometer enabled
 '   Active/measurement mode
     defaults{}
-    accelopmode(MEASURE)
+    accelopmode(ACTIVE)
     opmode(BOTH)
+
+PUB Preset_ClickDet{}
+' Preset settings for click detection
+    reset{}
+    acceldatarate(400)
+    accelscale(2)
+    clickaxisenabled(%111111)                   ' enable X, Y, Z single tap det
+    clickthreshx(1_575000)                      ' X: 1.575g thresh
+    clickthreshy(1_575000)                      ' Y: 1.575g
+    clickthreshz(2_650000)                      ' Z: 2.650g
+    clicktime(50_000)
+    clicklatency(300_000)
+    doubleclickwindow(300_000)
+    intmask(INT_PULSE)                          ' enable click/pulse interrupts
+    introuting(INT_PULSE)                       ' route click ints to INT1 pin
+    accelopmode(ACTIVE)
 
 PUB AccelADCRes(bits): curr_res
 ' dummy method
@@ -153,7 +178,7 @@ PUB AccelAxisEnabled(xyz_mask): curr_mask
 ' dummy method
     return %111
 
-PUB AccelBias(bias_x, bias_y, bias_z, rw) | tmp, opmode_orig
+PUB AccelBias(bias_x, bias_y, bias_z, rw) | tmp
 ' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
@@ -174,10 +199,9 @@ PUB AccelBias(bias_x, bias_y, bias_z, rw) | tmp, opmode_orig
             tmp.byte[2] := bias_x := -128 #> bias_x <# 127
             tmp.byte[1] := bias_y := -128 #> bias_y <# 127
             tmp.byte[0] := bias_z := -128 #> bias_z <# 127
-            opmode_orig := accelopmode(-2)      ' store user's opmode
-            accelopmode(STANDBY)                ' standby to set offsets
+            cacheopmode{}                       ' switch to stdby to mod regs
             writereg(core#OFF_X, 3, @tmp)
-            accelopmode(opmode_orig)            ' restore user's opmode
+            restoreopmode{}                     ' restore original opmode
 
 PUB AccelClearInt{} | tmp   ' TODO
 ' Clears out any interrupts set up on the Accelerometer
@@ -200,7 +224,7 @@ PUB AccelDataOverrun{}: flag
     readreg(core#STATUS, 1, @flag)
     return ((flag >> 6) & core#ZYXOW_BITS) == %111
 
-PUB AccelDataRate(rate): curr_rate | opmode_orig
+PUB AccelDataRate(rate): curr_rate
 ' Set accelerometer output data rate, in Hz
 '   Valid values: 1(.5625), 6(.25), 12(.5), 50, 100, 200, 400, *800
 '   Any other value polls the chip and returns the current setting
@@ -216,10 +240,9 @@ PUB AccelDataRate(rate): curr_rate | opmode_orig
             return lookupz(curr_rate: 800, 400, 200, 100, 50, 12, 6, 1)
 
     rate := ((curr_rate & core#DR_MASK) | rate) & core#CTRL_REG1_MASK
-    opmode_orig := accelopmode(-2)              ' store user's opmode
-    accelopmode(STANDBY)                        ' standby to modify settings
+    cacheopmode{}                               ' switch to stdby to mod regs
     writereg(core#CTRL_REG1, 1, @rate)
-    accelopmode(opmode_orig)                    ' restore user's opmode
+    restoreopmode{}                             ' restore original opmode
 
 PUB AccelDataReady{}: flag
 ' Flag indicating new accelerometer data available
@@ -240,7 +263,7 @@ PUB AccelInt{}: flag 'TODO
 '   Returns TRUE if interrupt asserted, FALSE if not
     flag := 0
 
-PUB AccelLowPassFilter(state): curr_state | opmode_orig
+PUB AccelLowPassFilter(state): curr_state
 ' Enable accelerometer data low-pass filter
 '   Valid values: TRUE (-1 or 1), *FALSE (0)
 '   Any other value polls the chip and returns the current setting
@@ -262,28 +285,27 @@ PUB AccelLowPassFilter(state): curr_state | opmode_orig
         other:
             return ((curr_state >> core#LNOISE) & 1) == 1
 
-    opmode_orig := accelopmode(-2)
-    accelopmode(STANDBY)
+    cacheopmode{}                               ' switch to stdby to mod regs
     writereg(core#CTRL_REG1, 1, @state)
-    accelopmode(opmode_orig)
+    restoreopmode{}                             ' restore original opmode
 
 PUB AccelOpMode(mode): curr_mode
 ' Set accelerometer operating mode
 '   Valid values:
-'      *STANDBY (0): Standby
-'       MEASURE (1): Measurement mode
+'      *STDBY (0): Standby
+'       ACTIVE (1): Measurement mode
 '   Any other value polls the chip and returns the current setting
     curr_mode := 0
     readreg(core#CTRL_REG1, 1, @curr_mode)
     case mode
-        STANDBY, MEASURE:
+        STDBY, ACTIVE:
         other:
             return (curr_mode & 1)
 
     mode := ((curr_mode & core#ACTIVE_MASK) | mode) & core#CTRL_REG1_MASK
     writereg(core#CTRL_REG1, 1, @mode)
 
-PUB AccelScale(g): curr_scale | opmode_orig
+PUB AccelScale(g): curr_scale
 ' Sets the full-scale range of the Accelerometer, in g's
 '   Valid values: *2, 4, 8
 '   Any other value polls the chip and returns the current setting
@@ -298,10 +320,9 @@ PUB AccelScale(g): curr_scale | opmode_orig
             return lookupz(curr_scale: 2, 4, 8)
 
     g := (curr_scale & core#FS_MASK) | g
-    opmode_orig := accelopmode(-2)
-    accelopmode(STANDBY)
+    cacheopmode{}                               ' switch to stdby to mod regs
     writereg(core#XYZ_DATA_CFG, 1, @g)
-    accelopmode(opmode_orig)
+    restoreopmode{}                             ' restore original opmode
 
 PUB CalibrateAccel{} | acceltmp[3], axis, ax, ay, az, samples, scale_orig, drate_orig, fifo_orig, scl
 ' Calibrate the accelerometer
@@ -351,6 +372,238 @@ PUB CalibrateMag{} | magtmp[3], axis, mx, my, mz, samples
         magtmp[axis] /= samples
 
     magbias(magtmp[X_AXIS], magtmp[Y_AXIS], magtmp[Z_AXIS], W)
+
+PUB ClickAxisEnabled(mask): curr_mask
+' Enable click detection per axis, and per click type
+'   Valid values:
+'       Bits: 5..0
+'       [5..4]: Z-axis double-click..single-click
+'       [3..2]: Y-axis double-click..single-click
+'       [1..0]: X-axis double-click..single-click
+'   Any other value polls the chip and returns the current setting
+    curr_mask := 0
+    readreg(core#PULSE_CFG, 1, @curr_mask)
+    case mask
+        %000000..%111111:
+        other:
+            return curr_mask & core#PEFE_BITS
+
+    mask := ((curr_mask & core#PEFE_MASK) | mask)
+    writereg(core#PULSE_CFG, 1, @mask)
+
+pUB Clicked{}: flag
+' Flag indicating the sensor was single or double-clicked
+'   Returns: TRUE (-1) if sensor was single-clicked or double-clicked
+'            FALSE (0) otherwise
+    return (((clickedint{} >> core#EA) & 1) <> 0)
+
+PUB ClickedInt{}: status
+' Clicked interrupt status
+'   Bits: 7..0
+'       7: Interrupt active
+'       6: Z-axis clicked
+'       5: Y-axis clicked
+'       4: X-axis clicked
+'       3: Double-click on first event
+'       2: Z-axis polarity (0: positive, 1: negative)
+'       1: Y-axis polarity (0: positive, 1: negative)
+'       0: X-axis polarity (0: positive, 1: negative)
+    readreg(core#PULSE_SRC, 1, @status)
+
+PUB ClickIntEnabled(state): curr_state
+' Enable click interrupts on INT1
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+    readreg(core#CTRL_REG4, 1, @curr_state)
+    case ||(state)
+        0, 1:
+            state := ||(state) << core#INT_EN_PULSE
+        other:
+            return ((curr_state >> core#INT_EN_PULSE) == 1)
+
+    state := ((curr_state & core#IE_PULSE_MASK) | state)
+    writereg(core#CTRL_REG4, 1, @state)
+
+PUB ClickLatency(ltime): curr_ltime | time_res, odr
+'   Set minimum elapsed time from detection of first click to recognition of
+'       any subsequent clicks (single or double), in microseconds. All clicks
+'       *during* this time will be ignored.
+'   Valid values:
+'                                   Max time range
+'                           ClickLPFEnabled()
+'       AccelDataRate():    == 0        == 1
+'       800                 318_000     638_000
+'       400                 318_000     1_276_000
+'       200                 638_000     2_560_000
+'       100                 1_276_000   5_100_000
+'       50                  2_560_000   10_200_000
+'       12                  2_560_000   10_200_000
+'       6                   2_560_000   10_200_000
+'       1                   2_560_000   10_200_000
+'   Any other value polls the chip and returns the current setting
+    ' calc time resolution (in microseconds) based on AccelDataRate() (1/ODR),
+    '   then limit to range spec'd in AN4072
+    odr := acceldatarate(-2)
+    if clicklpfenabled(-2)
+        time_res := 2_500 #> ((1_000000/odr) * 2) <# 40_000
+    else
+        time_res := 1_250 #> ((1_000000/odr) / 2) <# 10_000
+
+    ' check that the parameter is between 0 and the max time range for
+    '   the current AccelDataRate() setting
+    if (ltime => 0) and (ltime =< (time_res * 255))
+        ltime /= time_res
+        writereg(core#PULSE_LTCY, 1, @ltime)
+    else
+        readreg(core#PULSE_LTCY, 1, @curr_ltime)
+        return (curr_ltime * time_res)
+
+PUB ClickLPFEnabled(state): curr_state
+' Enable click detection low-pass filter
+'   Valid Values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+    curr_state := 0
+    readreg(core#HP_FILT_CUTOFF, 1, @curr_state)
+    case ||(state)
+        0, 1:
+            state := ||(state) << core#PLS_LPF_EN
+        other:
+            return (((curr_state >> core#PLS_LPF_EN) & 1) == 1)
+
+    state := ((curr_state & core#PLS_LPF_EN_MASK) | state)
+    writereg(core#HP_FILT_CUTOFF, 1, @state)
+
+PUB ClickThresh(thresh): curr_thresh
+' Set threshold for recognizing a click (all axes), in micro-g's
+'   Valid values:
+'       0..8_000000 (8g's)
+'   NOTE: The allowed range is fixed at 8g's, regardless of the current
+'       setting of AccelScale()
+'   NOTE: If AccelLowNoiseMode() is set to LOWNOISE, the maximum threshold
+'       recognized using this method will be 4_000000 (4g's)
+    case thresh
+        0..8_000000:
+            clickthreshx(thresh)
+            clickthreshy(thresh)
+            clickthreshz(thresh)
+        other:
+            return
+
+PUB ClickThreshX(thresh): curr_thresh
+' Set threshold for recognizing a click (X-axis), in micro-g's
+'   Valid values:
+'       0..8_000000 (8g's)
+'   Any other value polls the chip and returns the current setting
+'   NOTE: The allowed range is fixed at 8g's, regardless of the current
+'       setting of AccelScale()
+'   NOTE: If AccelLowNoiseMode() is set to LOWNOISE, the maximum threshold
+'       recognized using this method will be 4_000000 (4g's)
+    case thresh
+        0..8_000000:
+            thresh /= 0_063000
+            writereg(core#PULSE_THSX, 1, @thresh)
+        other:
+            readreg(core#PULSE_THSX, 1, @curr_thresh)
+            return curr_thresh * 0_063000       ' scale to 1..8_000000 (8g's)
+
+PUB ClickThreshY(thresh): curr_thresh
+' Set threshold for recognizing a click (Y-axis), in micro-g's
+'   Valid values:
+'       0..8_000000 (8g's)
+'   Any other value polls the chip and returns the current setting
+'   NOTE: The allowed range is fixed at 8g's, regardless of the current
+'       setting of AccelScale()
+'   NOTE: If AccelLowNoiseMode() is set to LOWNOISE, the maximum threshold
+'       recognized using this method will be 4_000000 (4g's)
+    case thresh
+        0..8_000000:
+            thresh /= 0_063000
+            writereg(core#PULSE_THSY, 1, @thresh)
+        other:
+            readreg(core#PULSE_THSY, 1, @curr_thresh)
+            return curr_thresh * 0_063000       ' scale to 1..8_000000 (8g's)
+
+PUB ClickThreshZ(thresh): curr_thresh
+' Set threshold for recognizing a click (Z-axis), in micro-g's
+'   Valid values:
+'       0..8_000000 (8g's)
+'   Any other value polls the chip and returns the current setting
+'   NOTE: The allowed range is fixed at 8g's, regardless of the current
+'       setting of AccelScale()
+'   NOTE: If AccelLowNoiseMode() is set to LOWNOISE, the maximum threshold
+'       recognized using this method will be 4_000000 (4g's)
+    case thresh
+        0..8_000000:
+            thresh /= 0_063000
+            writereg(core#PULSE_THSZ, 1, @thresh)
+        other:
+            readreg(core#PULSE_THSZ, 1, @curr_thresh)
+            return curr_thresh * 0_063000       ' scale to 1..8_000000 (8g's)
+
+PUB ClickTime(ctime): curr_ctime | time_res, odr
+' Set maximum elapsed interval between start of click and end of click, in uSec
+'   (i.e., time from set ClickThresh exceeded to falls back below threshold)
+'   Valid values:
+'                                   Max time range
+'                           ClickLPFEnabled()
+'       AccelDataRate():    == 0        == 1
+'       800                 159_000     319_000
+'       400                 159_000     638_000
+'       200                 319_000     1_280_000
+'       100                 638_000     2_550_000
+'       50                  1_280_000   5_100_000
+'       12                  1_280_000   5_100_000
+'       6                   1_280_000   5_100_000
+'       1                   1_280_000   5_100_000
+'   Any other value polls the chip and returns the current setting
+    ' calc time resolution (in microseconds) based on AccelDataRate() (1/ODR),
+    '   then limit to range spec'd in AN4072
+    odr := acceldatarate(-2)
+    if clicklpfenabled(-2)
+        time_res := 1_250 #> ((1_000000/odr)) <# 20_000
+    else
+        time_res := 0_625 #> ((1_000000/odr) / 4) <# 5_000
+
+    ' check that the parameter is between 0 and the max time range for
+    '   the current AccelDataRate() setting
+    if (ctime => 0) and (ctime =< (time_res * 255))
+        ctime /= time_res
+        writereg(core#PULSE_TMLT, 1, @ctime)
+    else
+        readreg(core#PULSE_TMLT, 1, @curr_ctime)
+        return (curr_ctime * time_res)
+
+PUB DoubleClickWindow(dctime): curr_dctime | time_res, odr
+' Set maximum elapsed interval between two consecutive clicks, in uSec
+'   Valid values:
+'                                   Max time range
+'                           ClickLPFEnabled()
+'       AccelDataRate():    == 0        == 1
+'       800                 318_000     638_000
+'       400                 318_000     1_276_000
+'       200                 638_000     2_560_000
+'       100                 1_276_000   5_100_000
+'       50                  2_560_000   10_200_000
+'       12                  2_560_000   10_200_000
+'       6                   2_560_000   10_200_000
+'       1                   2_560_000   10_200_000
+'   Any other value polls the chip and returns the current setting
+    ' calc time resolution (in microseconds) based on AccelDataRate() (1/ODR),
+    '   then limit to range spec'd in AN4072
+    odr := acceldatarate(-2)
+    if clicklpfenabled(-2)
+        time_res := 2_500 #> ((1_000000/odr) * 2) <# 40_000
+    else
+        time_res := 1_250 #> ((1_000000/odr) / 2) <# 10_000
+
+    ' check that the parameter is between 0 and the max time range for
+    '   the current AccelDataRate() setting
+    if (dctime => 0) and (dctime =< (time_res * 255))
+        dctime /= time_res
+        writereg(core#PULSE_WIND, 1, @dctime)
+    else
+        readreg(core#PULSE_WIND, 1, @curr_dctime)
+        return (curr_dctime * time_res)
 
 PUB DeviceID{}: id
 ' Read device identification
@@ -402,7 +655,7 @@ PUB FIFOMode(mode): curr_mode | fmode_bypass
 
     writereg(core#F_SETUP, 1, @mode)
 
-PUB FIFOThreshold(level): curr_lvl | opmode_orig
+PUB FIFOThreshold(level): curr_lvl
 ' Set FIFO watermark/threshold level
 '   Valid values: 0..32 (default: 0)
 '   Any other value polls the chip and returns the current setting
@@ -415,10 +668,9 @@ PUB FIFOThreshold(level): curr_lvl | opmode_orig
 
     level := ((curr_lvl & core#F_WMRK_MASK) | level) & core#F_SETUP_MASK
 
-    opmode_orig := accelopmode(-2)
-    accelopmode(STANDBY)
+    cacheopmode{}                               ' switch to stdby to mod regs
     writereg(core#F_SETUP, 1, @level)
-    accelopmode(opmode_orig)
+    restoreopmode{}                             ' restore original opmode
 
 PUB FIFOUnreadSamples: nr_samples
 ' Number of unread samples stored in FIFO
@@ -472,7 +724,7 @@ PUB Interrupt{}: int_src
     int_src := 0
     readreg(core#INT_SOURCE, 1, @int_src)
 
-PUB IntMask(mask): curr_mask | opmode_orig
+PUB IntMask(mask): curr_mask
 ' Set interrupt mask
 '   Valid values:
 '       Bits: [7..0]
@@ -488,13 +740,38 @@ PUB IntMask(mask): curr_mask | opmode_orig
 '   Any other value polls the chip and returns the current setting
     case mask
         0..%11111111:
-            opmode_orig := accelopmode(-2)
-            accelopmode(STANDBY)
+            cacheopmode{}                       ' switch to stdby to mod regs
             writereg(core#CTRL_REG4, 1, @mask)
-            accelopmode(opmode_orig)
+            restoreopmode{}                     ' restore original opmode
         other:
             curr_mask := 0
             readreg(core#CTRL_REG4, 1, @curr_mask)
+
+PUB IntRouting(mask): curr_mask
+' Set routing of interrupt sources to INT1 or INT2 pin
+'   Valid values:
+'       Setting a bit routes the interrupt to INT1
+'       Clearing a bit routes the interrupt to INT2
+'
+'       Bits [7..0] (OR together symbols, as needed)
+'       7: INT_AUTOSLPWAKE - Auto-sleep/wake
+'       6: NOT FIFO - FIFO
+'       5: INT_TRANS - Transient
+'       4: INT_ORIENT - Orientation (landscape/portrait)
+'       3: INT_PULSE - Pulse detection
+'       2: INT_FFALL - Freefall/motion
+'       1: INT_VECM - Accel. vector-magnitude
+'       0: INT_DRDY - Data ready
+'   Any other value polls the chip and returns the current setting
+    case mask
+        %00000000..%11111111:
+            mask &= core#CTRL_REG5_MASK
+            cacheopmode{}                       ' switch to stdby to mod regs
+            writereg(core#CTRL_REG5, 1, @mask)
+            restoreopmode{}                     ' restore original opmode
+        other:
+            readreg(core#CTRL_REG5, 1, @curr_mask)
+            return
 
 PUB IntThresh(thresh): curr_thr 'TODO
 
@@ -877,6 +1154,18 @@ PUB TempScale(scale): curr_scale
             _temp_scale := scale
         other:
             return _temp_scale
+
+PRI cacheOpMode{}
+' Store the current operating mode, and switch to standby if different
+'   (required for modifying some registers)
+    _opmode_orig := accelopmode(-2)
+    if _opmode_orig <> STDBY                    ' must be in standby to change
+        accelopmode(STDBY)                      '   control regs
+
+PRI restoreOpMode{}
+' Restore original operating mode
+    if _opmode_orig <> STDBY                    ' restore original opmode
+        accelopmode(_opmode_orig)
 
 PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from device into ptr_buff

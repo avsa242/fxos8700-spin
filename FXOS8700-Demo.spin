@@ -19,8 +19,8 @@ CON
     LED         = cfg#LED1
     SER_BAUD    = 115_200
 
-    I2C_SCL     = 24
-    I2C_SDA     = 25
+    I2C_SCL     = 28
+    I2C_SDA     = 29
     I2C_HZ      = 400_000
     ADDR_BITS   = %11                           ' %00..%11 ($1E, 1D, 1C, 1F)
 
