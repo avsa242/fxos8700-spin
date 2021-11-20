@@ -82,9 +82,9 @@ OBJ
 
 VAR
 
-    long _ares, _abiasraw[3]
-    long _mres, _mbiasraw[3]
-    byte _slave_addr, _temp_scale
+    long _ares, _abiasraw[ACCEL_DOF]
+    long _mres, _mbiasraw[MAG_DOF]
+    byte _addr_bits, _temp_scale
     byte _opmode_orig
     byte _RES
 
@@ -107,11 +107,11 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS, RES_PIN): status
             ' Unfortunately, the chip's mapping of SAx bits to the slave address isn't
             '   logical, so to work around it, determine it conditionally:
             case ADDR_BITS
-                %00: _slave_addr := core#SLAVE_ADDR_1E
-                %01: _slave_addr := core#SLAVE_ADDR_1D
-                %10: _slave_addr := core#SLAVE_ADDR_1C
-                %11: _slave_addr := core#SLAVE_ADDR_1F
-                other: _slave_addr := core#SLAVE_ADDR_1E
+                %00: _addr_bits := core#SLAVE_ADDR_1E
+                %01: _addr_bits := core#SLAVE_ADDR_1D
+                %10: _addr_bits := core#SLAVE_ADDR_1C
+                %11: _addr_bits := core#SLAVE_ADDR_1F
+                other: _addr_bits := core#SLAVE_ADDR_1E
 
             if deviceid{} == core#DEVID_RESP
                 defaults{}
@@ -127,31 +127,13 @@ PUB Stop{}
 
 PUB Defaults{}
 ' Factory default settings
-    accelopmode(STDBY)
-    opmode(ACCEL)
-
-    acceldatarate(800)
-    accellowpassfilter(false)
-    accelscale(2)
-    fifoenabled(FALSE)
-    fifothreshold(0)
-    intmask(%00000000)
-    magdataoversampling(2)
-    'magdatarate(800)                           ' already set by acceldatarate
-    magintsenabled(FALSE)
-    magintthreshx(0)
-    magintthreshy(0)
-    magintthreshz(0)
-    magintpersistence(0)
-    magthreshintmask(%000)
-    magthreshintsenabled(FALSE)
-    tempscale(C)
+    reset{}
 
 PUB Preset_Active{}
 ' Like factory defaults, but with the following changes:
 '   Accelerometer + Magnetometer enabled
 '   Active/measurement mode
-    defaults{}
+    reset{}
     accelopmode(ACTIVE)
     opmode(BOTH)
 
@@ -1171,21 +1153,21 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from device into ptr_buff
     case reg_nr                                 ' Validate regs
         $01, $03, $05, $33, $35, $37, $39, $3b, $3d:' Prioritize data output
-            cmd_pkt.byte[0] := _slave_addr
+            cmd_pkt.byte[0] := _addr_bits
             cmd_pkt.byte[1] := reg_nr
             i2c.start{}                         ' S
             i2c.wrblock_lsbf(@cmd_pkt, 2)       ' SL|W, reg_nr
             i2c.start{}                         ' Sr
-            i2c.write(_slave_addr | 1)          ' SL|R
+            i2c.write(_addr_bits | 1)           ' SL|R
             i2c.rdblock_msbf(ptr_buff, nr_bytes, i2c#NAK)' R sl -> ptr_buff
             i2c.stop{}                          ' P
         $00, $02, $04, $06, $09..$18, $1d..$32, $34, $36, $38, $3a, $3e..$78:
-            cmd_pkt.byte[0] := _slave_addr
+            cmd_pkt.byte[0] := _addr_bits
             cmd_pkt.byte[1] := reg_nr
             i2c.start{}                         ' S
             i2c.wrblock_lsbf(@cmd_pkt, 2)       ' SL|W, reg_nr
             i2c.start{}                         ' Sr
-            i2c.write(_slave_addr | 1)          ' SL|R
+            i2c.write(_addr_bits | 1)           ' SL|R
             i2c.rdblock_msbf(ptr_buff, nr_bytes, i2c#NAK)' R sl -> ptr_buff
             i2c.stop{}                          ' P
         other:
@@ -1196,7 +1178,7 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
     case reg_nr
         $09, $0a, $0e, $0f, $11..$15, $17..$1d, $1f..$21, $23..$31, $3f..$44,{
         } $52, $54..$5d, $5f..$78:
-            cmd_pkt.byte[0] := _slave_addr
+            cmd_pkt.byte[0] := _addr_bits
             cmd_pkt.byte[1] := reg_nr
             i2c.start{}                         ' S
             i2c.wrblock_lsbf(@cmd_pkt, 2)       ' SL|W, reg_nr
