@@ -229,12 +229,12 @@ PUB AccelDataReady{}: flag
     readreg(core#STATUS, 1, @flag)
     return ((flag & core#ZYX_DR) <> 0)
 
-PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpx, tmpy, tmpz
+PUB AccelG(ptr_x, ptr_y, ptr_z) | tmp[ACCEL_DOF]
 ' Reads the Accelerometer output registers and scales the outputs to micro-g's (1_000_000 = 1.000000 g = 9.8 m/s/s)
-    acceldata(@tmpx, @tmpy, @tmpz)
-    long[ptr_x] := tmpx * _ares
-    long[ptr_y] := tmpy * _ares
-    long[ptr_z] := tmpz * _ares
+    acceldata(@tmp[X_AXIS], @tmp[Y_AXIS], @tmp[Z_AXIS])
+    long[ptr_x] := tmp[X_AXIS] * _ares
+    long[ptr_y] := tmp[Y_AXIS] * _ares
+    long[ptr_z] := tmp[Z_AXIS] * _ares
 
 PUB AccelInt{}: flag 'TODO
 ' Flag indicating accelerometer interrupt asserted
