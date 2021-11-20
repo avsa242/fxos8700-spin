@@ -40,8 +40,8 @@ CON
         ZDR             = 2
         YDR             = 1
         XDR             = 0
-        ZYXOW_BITS      = %111
-        ZYXDR_BITS      = %111
+        ZYX_OW          = 1 << ZYXOW
+        ZYX_DR          = 1 << ZYXDR
 
     F_STATUS            = $00                       ' Same reg as STATUS above
         F_OVF           = 7                         ' This context applies only

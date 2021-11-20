@@ -185,11 +185,6 @@ PUB AccelBias(bias_x, bias_y, bias_z, rw) | tmp
             writereg(core#OFF_X, 3, @tmp)
             restoreopmode{}                     ' restore original opmode
 
-PUB AccelClearInt{} | tmp   ' TODO
-' Clears out any interrupts set up on the Accelerometer
-'   and resets all Accelerometer interrupt registers to their default values.
-    tmp := 0
-
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Reads the Accelerometer output registers
     readreg(core#OUT_X_MSB, 6, @tmp)
@@ -204,7 +199,7 @@ PUB AccelDataOverrun{}: flag
 '       FALSE (0): no data overrun
     flag := 0
     readreg(core#STATUS, 1, @flag)
-    return ((flag >> 6) & core#ZYXOW_BITS) == %111
+    return ((flag & core#ZYX_OW) <> 0)
 
 PUB AccelDataRate(rate): curr_rate
 ' Set accelerometer output data rate, in Hz
@@ -231,7 +226,7 @@ PUB AccelDataReady{}: flag
 '   Returns TRUE (-1) if data ready, FALSE otherwise
     flag := 0
     readreg(core#STATUS, 1, @flag)
-    return (flag & core#ZYXDR_BITS) == %111
+    return ((flag & core#ZYX_DR) <> 0)
 
 PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpx, tmpy, tmpz
 ' Reads the Accelerometer output registers and scales the outputs to micro-g's (1_000_000 = 1.000000 g = 9.8 m/s/s)
