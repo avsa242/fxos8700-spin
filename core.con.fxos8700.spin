@@ -5,7 +5,7 @@
     Description: FXOS8700-specific constants
     Copyright (c) 2021
     Started Sep 19, 2020
-    Updated Nov 19, 2021
+    Updated Nov 20, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -103,21 +103,92 @@ CON
         SEL_MASK        = SEL_BITS ^ HP_FILT_CUTOFF_MASK
 
     PL_STATUS           = $10
+    PL_STATUS_MASK      = $C7
+        NEWLP           = 7
+        LO              = 6
+        LAPO            = 1
+        BAFRO           = 0
+        LAPO_BITS       = %11
+        LAPOBAFRO_BITS  = %111
+        PORT_UP         = %00
+        PORT_DN         = %01
+        LAND_RT         = %10
+        LAND_LT         = %11
+        FRONT           = %0
+        BACK            = %1
+
     PL_CFG              = $11
-    PL_COUNT            = $12
+    PL_CFG_MASK         = $C0
+        PDBCNTM         = 7
+        PL_EN           = 6
+        PDBCNTM_MASK    = (1 << PDBCNTM) ^ PL_CFG_MASK
+        PL_EN_MASK      = 1 ^ PL_CFG_MASK
+
+    PL_CNT              = $12
     PL_BF_ZCOMP         = $13
     PL_THS_REG          = $14
-    A_FFMT_CFG          = $15
-    A_FFMT_SRC          = $16
-    A_FFMT_THS          = $17
-    A_FFMT_COUNT        = $18
+
+    FFMT_CFG            = $15
+    FFMT_CFG_MASK       = $F8
+        FELE            = 7
+        FOAE            = 6
+        FZEFE           = 5
+        FYEFE           = 4
+        FXEFE           = 3
+        FEFE            = 3
+        FEFE_BITS       = %111
+        FELE_MASK       = (1 << FELE) ^ FFMT_CFG_MASK
+        FOAE_MASK       = (1 << FOAE) ^ FFMT_CFG_MASK
+        FEFE_MASK       = FEFE_BITS ^ FFMT_CFG_MASK
+
+    FFMT_SRC            = $16
+    FFMT_SRC_MASK       = $BF
+        FEA             = 7
+        ZHE             = 5
+        ZHP             = 4
+        YHE             = 3
+        YHP             = 2
+        XHE             = 1
+        XHP             = 0
+
+    FFMT_THS            = $17
+    FFMT_THS_MASK       = $FF
+        FDBCNTM         = 7
+        FF_THS          = 0
+        FF_THS_BITS     = %1111111
+        FDBCNTM_MASK    = (1 << FDBCNTM) ^ FFMT_THS_MASK
+        FF_THS_MASK     = FF_THS_BITS ^ FFMT_THS_MASK
+
+    FFMT_CNT            = $18
 
 ' $19..$1C RESERVED
 
     TRANSIENT_CFG       = $1D
+    TRANSIENT_CFG_MASK  = $3F
+        TELE            = 4
+        ZTEFE           = 3
+        YTEFE           = 2
+        XTEFE           = 1
+        TEFE            = 1
+        HPF_BYP         = 0
+        TEFE_BITS       = %111
+        TELE_MASK       = (1 << TELE) ^ TRANSIENT_CFG_MASK
+        ZTEFE_MASK      = (1 << ZTEFE) ^ TRANSIENT_CFG_MASK
+        YTEFE_MASK      = (1 << YTEFE) ^ TRANSIENT_CFG_MASK
+        XTEFE_MASK      = (1 << XTEFE) ^ TRANSIENT_CFG_MASK
+        TEFE_MASK       = (TEFE_BITS << ZTEFE) ^ TRANSIENT_CFG_MASK
+        HPF_BYP_MASK    = 1 ^ TRANSIENT_CFG_MASK
+
     TRANSIENT_SRC       = $1E
     TRANSIENT_THS       = $1F
-    TRANSIENT_COUNT     = $20
+    TRANSIENT_THS_MASK  = $FF
+        TDBCNTM         = 7
+        THS             = 0
+        THS_BITS        = %1111111
+        TDBCNTM_MASK    = (1 << TDBCNTM) ^ TRANSIENT_THS_MASK
+        THS_MASK        = THS_BITS ^ TRANSIENT_THS_MASK
+
+    TRANSIENT_CNT       = $20
 
     PULSE_CFG           = $21
     PULSE_CFG_MASK      = $FF
@@ -141,13 +212,23 @@ CON
         PEFE_MASK       = PEFE_BITS ^ PULSE_CFG_MASK
 
     PULSE_SRC           = $22
+    PULSE_SRC_MASK      = $FF
+        EA              = 7
+        AXZ             = 6
+        AXY             = 5
+        AXX             = 4
+        DPE             = 3
+        POLZ            = 2
+        POLY            = 1
+        POLX            = 0
+
     PULSE_THSX          = $23
     PULSE_THSY          = $24
     PULSE_THSZ          = $25
     PULSE_TMLT          = $26
     PULSE_LTCY          = $27
     PULSE_WIND          = $28
-    ASLP_COUNT          = $29
+    ASLP_CNT            = $29
 
     CTRL_REG1           = $2A
     CTRL_REG1_MASK      = $FF
@@ -181,7 +262,44 @@ CON
         SRESET          = (1 << RST)
 
     CTRL_REG3           = $2C
+    CTRL_REG3_MASK      = $FF
+        FIFO_GATE       = 7
+        WAKE_TRANS      = 6
+        WAKE_LNDPRT     = 5
+        WAKE_PULSE      = 4
+        WAKE_FFMT       = 3
+        WAKE            = 3
+        WAKE_VECM       = 2
+        IPOL            = 1
+        PP_OD           = 0
+        WAKE_BITS       = %1111
+        FIFO_GATE_MASK  = (1 << FIFO_GATE) ^ CTRL_REG3_MASK
+        WAKE_TRANS_MASK = (1 << WAKE_TRANS) ^ CTRL_REG3_MASK
+        WAKE_LNDPRT_MASK= (1 << WAKE_LNDPRT) ^ CTRL_REG3_MASK
+        WAKE_PULSE_MASK = (1 << WAKE_PULSE) ^ CTRL_REG3_MASK
+        WAKE_FFMT_MASK  = (1 << WAKE_FFMT) ^ CTRL_REG3_MASK
+        WAKE_MASK       = (WAKE_BITS << WAKE) ^ CTRL_REG3_MASK
+        IPOL_MASK       = (1 << IPOL) ^ CTRL_REG3_MASK
+        PP_OD_MASK      = 1 ^ CTRL_REG3_MASK
+
     CTRL_REG4           = $2D
+    CTRL_REG4_MASK      = $BD
+        INT_EN_ASLP     = 7
+        INT_EN_FIFO     = 6
+        INT_EN_TRANS    = 5
+        INT_EN_LNDPRT   = 4
+        INT_EN_PULSE    = 3
+        INT_EN_FF_MT    = 2
+        INT_EN_VECM     = 1
+        INT_EN_DRDY     = 0
+        IE_ASLP_MASK    = (1 << INT_EN_ASLP) ^ CTRL_REG4_MASK
+        IE_FIFO_MASK    = (1 << INT_EN_FIFO) ^ CTRL_REG4_MASK
+        IE_TRANS_MASK   = (1 << INT_EN_TRANS) ^ CTRL_REG4_MASK
+        IE_LNDPRT_MASK  = (1 << INT_EN_LNDPRT) ^ CTRL_REG4_MASK
+        IE_PULSE_MASK   = (1 << INT_EN_PULSE) ^ CTRL_REG4_MASK
+        IE_FF_MT_MASK   = (1 << INT_EN_FF_MT) ^ CTRL_REG4_MASK
+        IE_VECM_MASK    = (1 << INT_EN_VECM) ^ CTRL_REG4_MASK
+        IE_DRDY_MASK    = 1 ^ CTRL_REG4_MASK
 
     CTRL_REG5           = $2E
     CTRL_REG5_MASK      = $BD
@@ -255,7 +373,7 @@ CON
     M_THS_Y_LSB         = $57
     M_THS_Z_MSB         = $58
     M_THS_Z_LSB         = $59
-    M_THS_COUNT         = $5A
+    M_THS_CNT           = $5A
 
     M_CTRL_REG1         = $5B
     M_CTRL_REG1_MASK    = $FF
@@ -304,7 +422,6 @@ CON
 
 ' $79 RESERVED
 
-#ifndef __propeller2__
-PUB Null
-'' This is not a top-level object
-#endif
+PUB Null{}
+' This is not a top-level object
+

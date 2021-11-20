@@ -136,6 +136,7 @@ PUB Preset_Active{}
     reset{}
     accelopmode(ACTIVE)
     opmode(BOTH)
+    accelscale(2)
 
 PUB Preset_ClickDet{}
 ' Preset settings for click detection
@@ -674,7 +675,7 @@ PUB IntClear(clear_mask) | i, reg_nr, tmp
         0..%111111:
             repeat i from 5 to 0                    ' Each int is cleared by
                 if clear_mask & (1 << (i+2))        ' reading a different reg
-                    reg_nr := lookdownz(i: core#A_FFMT_SRC, core#PULSE_SRC, {
+                    reg_nr := lookdownz(i: core#FFMT_SRC, core#PULSE_SRC, {
                     }core#PL_STATUS, core#TRANSIENT_SRC, core#F_STATUS, {
                     }core#SYSMOD)                   ' Sweep through all, and
                     readreg(reg_nr, 1, @tmp)        ' clear those with bits
@@ -885,7 +886,7 @@ PUB MagDataReady{}: flag
 '   Returns TRUE (-1) if data ready, FALSE otherwise
     flag := 0
     readreg(core#M_DR_STATUS, 1, @flag)
-    return (flag & core#ZYXDR_BITS) == %111
+    return ((flag & core#ZYX_DR) <> 0)
 
 PUB MagGauss(ptr_x, ptr_y, ptr_z) | tmp[3]
 ' Magnetometer data scaled to micro-Gauss (1_000_000 = 1.000000 Gs)
@@ -913,10 +914,10 @@ PUB MagIntPersistence(cycles): curr_cyc
 '   Any other value polls the device and returns the current setting
     case cycles
         0..255:
-            writereg(core#M_THS_COUNT, 1, @cycles)
+            writereg(core#M_THS_CNT, 1, @cycles)
         other:
             curr_cyc := 0
-            readreg(core#M_THS_COUNT, 1, @curr_cyc)
+            readreg(core#M_THS_CNT, 1, @curr_cyc)
             return
 
 PUB MagIntRouting(mask): curr_mask
