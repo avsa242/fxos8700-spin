@@ -221,7 +221,7 @@ PUB AccelDataRate(rate): curr_rate
             curr_rate := (curr_rate >> core#DR) & core#DR_BITS
             return lookupz(curr_rate: 800, 400, 200, 100, 50, 12, 6, 1)
 
-    rate := ((curr_rate & core#DR_MASK) | rate) & core#CTRL_REG1_MASK
+    rate := ((curr_rate & core#DR_MASK) | rate)
     cacheopmode{}                               ' switch to stdby to mod regs
     writereg(core#CTRL_REG1, 1, @rate)
     restoreopmode{}                             ' restore original opmode
@@ -284,7 +284,7 @@ PUB AccelOpMode(mode): curr_mode
         other:
             return (curr_mode & 1)
 
-    mode := ((curr_mode & core#ACTIVE_MASK) | mode) & core#CTRL_REG1_MASK
+    mode := ((curr_mode & core#ACTIVE_MASK) | mode)
     writereg(core#CTRL_REG1, 1, @mode)
 
 PUB AccelScale(g): curr_scale
@@ -648,7 +648,7 @@ PUB FIFOThreshold(level): curr_lvl
         other:
             return (curr_lvl & core#F_WMRK_BITS)
 
-    level := ((curr_lvl & core#F_WMRK_MASK) | level) & core#F_SETUP_MASK
+    level := ((curr_lvl & core#F_WMRK_MASK) | level)
 
     cacheopmode{}                               ' switch to stdby to mod regs
     writereg(core#F_SETUP, 1, @level)
@@ -874,7 +874,7 @@ PUB MagDataOverSampling(ratio): curr_ratio
                 other:
                     return 2
 
-    ratio := ((curr_ratio & core#M_OS_MASK) | ratio) & core#M_CTRL_REG1_MASK
+    ratio := ((curr_ratio & core#M_OS_MASK) | ratio)
     writereg(core#M_CTRL_REG1, 1, @ratio)
 
 PUB MagDataRate(rate): curr_rate
@@ -954,7 +954,7 @@ PUB MagIntsEnabled(state): curr_state
         other:
             return ((curr_state >> core#THS_INT_EN) & 1) == 1
 
-    state := ((curr_state & core#THS_INT_EN_MASK) | state) & core#M_THS_CFG_MASK
+    state := ((curr_state & core#THS_INT_EN_MASK) | state)
     writereg(core#M_THS_CFG, 1, @state)
 
 PUB MagIntThresh(level): curr_thr 'TODO
@@ -1069,7 +1069,7 @@ PUB MagThreshIntsEnabled(state): curr_state
         other:
             return ((curr_state >> core#THS_INT_EN) & 1) == 1
 
-    state := ((curr_state & core#THS_INT_EN_MASK) | state) & core#M_THS_CFG_MASK
+    state := ((curr_state & core#THS_INT_EN_MASK) | state)
     writereg(core#M_THS_CFG, 1, @state)
 
 PUB OpMode(mode): curr_mode
@@ -1086,7 +1086,7 @@ PUB OpMode(mode): curr_mode
         other:
             return (curr_mode & core#M_HMS_BITS)
 
-    mode := ((curr_mode & core#M_HMS_MASK) | mode) & core#M_CTRL_REG1_MASK
+    mode := ((curr_mode & core#M_HMS_MASK) | mode)
     writereg(core#M_CTRL_REG1, 1, @mode)
 
 PUB Reset{} | tmp
