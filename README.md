@@ -7,44 +7,47 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for the NXP FXO
 
 ## Salient Features
 
-* I2C connection at up to 400kHz (with optional alternate slave addresses)
-* Read raw accelerometer, magnetometer data output, or scaled (micro-g's, micro-gauss, resp.), scaled temperature (C, F, K)
-* Set output data rate (accel+mag locked), oversampling ratio (mag)
-* Set full-scale range (accel only; chip magnetometer is fixed at 1200uT, but retains MagScale() method for API compatibility)
-* Flags to indicate data is ready (accel, mag), has overrun (accel, mag)
-* Automatically or manually set bias offsets (accel, mag)
+* I2C connection at up to 400kHz
+* Supports default or alternate I2C address
+* Manually or automatically set bias offsets (on-chip)
+* Accelerometer built-in self-test
+* Read accelerometer data in ADC words or micro-g's
+* Read magnetometer data in ADC words or micro-Gauss
+* Read temperature (C, F, K)
+* Set output data rate (accel+mag locked, in active and low-power operating modes)
+* Set power state
+* Set accelerometer full-scale
+* Set interrupt flags, INT1/2 pin active state
+* Set accelerometer data oversampling/power mode (in active and low-power operating modes)
+* Output data filtering: high-pass
+* Read flags: data ready (accel, mag), data overrun (accel, mag), interrupts
+* Orientation detection
+* Click/Pulse/Tap detection
+* Free-fall detection
+* Inactivity detection/auto-sleep
 * FIFO control and flag reading (set watermark, set circular buffer or FIFO mode, flag if full, number of unread samples)
-* Interrupts: specific events (accel; partial support), threshold trigger (mag; partial support)
 
 ## Requirements
 
 P1/SPIN1:
 * spin-standard-library
+* 1 extra core/cog for the PASM I2C engine
 
 P2/SPIN2:
 * p2-spin-standard-library
 
 ## Compiler Compatibility
 
-* P1/SPIN1: OpenSpin (tested with 1.00.81), FlexSpin (tested with 5.3.3-beta)
-* P2/SPIN2: FlexSpin (tested with 5.3.3-beta)
+* P1/SPIN1 OpenSpin (bytecode): OK, tested with 1.00.81
+* P1/SPIN1 FlexSpin (bytecode): OK, tested with 5.9.4-beta
+* P1/SPIN1 FlexSpin (native): OK, tested with 5.9.4-beta
+* ~~P2/SPIN2 FlexSpin (bytecode): FTBFS, tested with 5.9.4-beta~~
+* P2/SPIN2 FlexSpin (native): OK, tested with 5.9.4-beta
 * ~~BST~~ (incompatible - no preprocessor)
 * ~~Propeller Tool~~ (incompatible - no preprocessor)
 * ~~PNut~~ (incompatible - no preprocessor)
 
 ## Limitations
 
-* Very early in development - may malfunction, or outright fail to build
 * If both accel and mag sensors are enabled, data rate is halved (chip limitation). Currently, the data rate setting methods don't reflect this
 
-## TODO
-
-- [x] Port to P2/SPIN2
-- [x] Implement temperature sensor support
-- [x] Implement MagDataRate()
-
-Expand interrupt support:
-- [ ] Magnetometer interrupts
-- [ ] Pulse detection
-- [ ] Free-fall detection
-- [ ] Transient detection

@@ -1,11 +1,11 @@
 {
     --------------------------------------------
-    Filename: FXOS8700-Demo.spin
+    Filename: FXOS8700-Demo.spin2
     Author: Jesse Burt
-    Description: Demo of the FXOS8700 driver
+    Description: Demo of the FXOS8700 driver (P2 version)
     Copyright (c) 2021
     Started Sep 19, 2020
-    Updated Nov 18, 2021
+    Updated Nov 20, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -40,7 +40,6 @@ OBJ
 
     cfg : "core.con.boardcfg.p2eval"
     ser : "com.serial.terminal.ansi"
-    time: "time"
     imu : "sensor.imu.6dof.fxos8700.i2c"
     int : "string.integer"
 
