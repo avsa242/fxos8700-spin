@@ -23,7 +23,7 @@ CON
     SCL_PIN     = 28
     SDA_PIN     = 29
     I2C_HZ      = 400_000                       ' max is 400_000
-    ADDR_BITS   = %11                           ' xxx
+    ADDR_BITS   = %11                           ' %00..%11 ($1E, 1D, 1C, 1F)
 
     RES_PIN     = -1                            ' reset optional: -1 to disable
 ' --

@@ -36,6 +36,14 @@ CON
     R               = 0
     W               = 1
 
+' Scales and data rates used during calibration/bias/offset process
+    CAL_XL_SCL      = 2
+    CAL_G_SCL       = 0
+    CAL_M_SCL       = 12
+    CAL_XL_DR       = 800
+    CAL_G_DR        = 0
+    CAL_M_DR        = 800
+
 ' Axis-specific constants
     X_AXIS          = 0
     Y_AXIS          = 1
@@ -60,6 +68,7 @@ CON
 ' Accel Operating modes
     STDBY           = 0
     ACTIVE          = 1
+    SLEEP           = 2
 
 ' Operating modes
     ACCEL           = 0
@@ -73,6 +82,33 @@ CON
     INT_PULSE       = 1 << 3
     INT_FFALL       = 1 << 2
     INT_DRDY        = 1
+
+' Accelerometer power modes
+    NORMAL          = 0
+    LONOISE_LOPWR   = 1
+    HIGHRES         = 2
+    LOPWR           = 3
+
+' Orientation
+    PORTUP_FR       = %000
+    PORTUP_BK       = %001
+    PORTDN_FR       = %010
+    PORTDN_BK       = %011
+    LANDRT_FR       = %100
+    LANDRT_BK       = %101
+    LANDLT_FR       = %110
+    LANDLT_BK       = %111
+
+' Wake on interrupt sources
+    WAKE_TRANS      = 1 << 4
+    WAKE_ORIENT     = 1 << 3
+    WAKE_PULSE      = 1 << 2
+    WAKE_FFALL      = 1 << 1
+    WAKE_VECM       = 1
+
+' Interrupt active state
+    LOW             = 0
+    HIGH            = 1
 
 OBJ
 
@@ -137,6 +173,7 @@ PUB Preset_Active{}
     accelopmode(ACTIVE)
     opmode(BOTH)
     accelscale(2)
+    acceldatarate(50)
 
 PUB Preset_ClickDet{}
 ' Preset settings for click detection
@@ -153,6 +190,18 @@ PUB Preset_ClickDet{}
     intmask(INT_PULSE)                          ' enable click/pulse interrupts
     introuting(INT_PULSE)                       ' route click ints to INT1 pin
     accelopmode(ACTIVE)
+
+PUB Preset_FreeFall{}
+' Preset settings for free-fall detection
+    reset{}
+    acceldatarate(400)
+    accelscale(2)
+    freefalltime(30_000)                        ' 30_000us/30ms min time
+    freefallthresh(0_315000)                    ' 0.315g's
+    freefallaxisenabled(%111)                   ' all axes
+    accelopmode(ACTIVE)
+    intmask(INT_FFALL)                          ' enable free-fall interrupt
+    introuting(INT_FFALL)                       ' route free-fall ints to INT1
 
 PUB AccelADCRes(bits): curr_res
 ' dummy method
@@ -236,10 +285,195 @@ PUB AccelG(ptr_x, ptr_y, ptr_z) | tmp[ACCEL_DOF]
     long[ptr_y] := tmp[Y_AXIS] * _ares
     long[ptr_z] := tmp[Z_AXIS] * _ares
 
+PUB AccelHPFEnabled(state): curr_state
+' Enable accelerometer data high-pass filter
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+    curr_state := 0
+    readreg(core#XYZ_DATA_CFG, 1, @curr_state)
+    case ||(state)
+        0, 1:
+            state := ||(state) << core#HPF_OUT
+        other:
+            return (((curr_state >> core#HPF_OUT) & 1) == 1)
+
+    state := ((curr_state & core#HPF_OUT_MASK) | state)
+    writereg(core#XYZ_DATA_CFG, 1, @state)
+
+PUB AccelHPFreq(freq): curr_freq
+' Set accelerometer data high-pass cutoff frequency, in milli-Hz
+'   Valid values:
+'   AccelPowerMode(): NORMAL
+'   AccelDataRate():    800, 400    200     100     50, 12, 6, 1
+'                       16_000      8_000   4_000   2_000
+'                       8_000       4_000   2_000   1_000
+'                       4_000       2_000   1_000   500
+'                       2_000       1_000   500     250
+'   AccelPowerMode(): LONOISE_LOPWR
+'   AccelDataRate():    800, 400    200     100     50      12, 6, 1
+'                       16_000      8_000   4_000   2_000   500
+'                       8_000       4_000   2_000   1_000   250
+'                       4_000       2_000   1_000   500     125
+'                       2_000       1_000   500     250     63
+'   AccelPowerMode(): HIGHRES
+'   AccelDataRate():    All
+'                       16_000
+'                       8_000
+'                       4_000
+'                       2_000
+'   AccelPowerMode(): LOPWR
+'   AccelDataRate():    800     400     200     100     50      12, 6, 1
+'                       16_000  8_000   4_000   2_000   1_000   250
+'                       8_000   4_000   2_000   1_000   500     125
+'                       4_000   2_000   1_000   500     250     63
+'                       2_000   1_000   500     250     125     31
+'   Any other value polls the chip and returns the current setting
+    curr_freq := 0
+    readreg(core#HP_FILT_CUTOFF, 1, @curr_freq)
+    case accelpowermode(-2)
+        NORMAL:
+            case acceldatarate(-2)
+                800, 400:
+                    case freq
+                        16_000, 8_000, 4_000, 2_000:
+                            freq := lookdownz(freq: 16_000, 8_000, 4_000, 2_000)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 16_000, 8_000, 4_000, 2_000)
+                200:
+                    case freq
+                        8_000, 4_000, 2_000, 1_000:
+                            freq := lookdownz(freq: 8_000, 4_000, 2_000, 1_000)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 8_000, 4_000, 2_000, 1_000)
+                100:
+                    case freq
+                        4_000, 2_000, 1_000, 500:
+                            freq := lookdownz(freq: 4_000, 2_000, 1_000, 500)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 4_000, 2_000, 1_000, 500)
+                50, 12, 6, 1:
+                    case freq
+                        2_000, 1_000, 500, 250:
+                            freq := lookdownz(freq: 2_000, 1_000, 500, 250)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 2_000, 1_000, 500, 250)
+        LONOISE_LOPWR:
+            case acceldatarate(-2)
+                800, 400:
+                    case freq
+                        16_000, 8_000, 4_000, 2_000:
+                            freq := lookdownz(freq: 16_000, 8_000, 4_000, 2_000)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 16_000, 8_000, 4_000, 2_000)
+                200:
+                    case freq
+                        8_000, 4_000, 2_000, 1_000:
+                            freq := lookdownz(freq: 8_000, 4_000, 2_000, 1_000)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 8_000, 4_000, 2_000, 1_000)
+                100:
+                    case freq
+                        4_000, 2_000, 1_000, 500:
+                            freq := lookdownz(freq: 4_000, 2_000, 1_000, 500)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 4_000, 2_000, 1_000, 500)
+                50:
+                    case freq
+                        2_000, 1_000, 500, 250:
+                            freq := lookdownz(freq: 2_000, 1_000, 500, 250)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 2_000, 1_000, 500, 250)
+                12, 6, 1:
+                    case freq
+                        500, 250, 125, 63:
+                            freq := lookdownz(freq: 500, 250, 125, 63)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 500, 250, 125, 63)
+        HIGHRES:
+            case freq
+                2_000, 4_000, 8_000, 16_000:
+                    freq := lookdownz(freq: 16_000, 8_000, 4_000, 2_000)
+        LOPWR:
+            case acceldatarate(-2)
+                800:
+                    case freq
+                        16_000, 8_000, 4_000, 2_000:
+                            freq := lookdownz(freq: 16_000, 8_000, 4_000, 2_000)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 16_000, 8_000, 4_000, 2_000)
+                400:
+                    case freq
+                        8_000, 4_000, 2_000, 1_000:
+                            freq := lookdownz(freq: 8_000, 4_000, 2_000, 1_000)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 8_000, 4_000, 2_000, 1_000)
+                200:
+                    case freq
+                        4_000, 2_000, 1_000, 500:
+                            freq := lookdownz(freq: 4_000, 2_000, 1_000, 500)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 4_000, 2_000, 1_000, 500)
+                100:
+                    case freq
+                        2_000, 1_000, 500, 250:
+                            freq := lookdownz(freq: 2_000, 1_000, 500, 250)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 2_000, 1_000, 500, 250)
+                50:
+                    case freq
+                        1_000, 500, 250, 125:
+                            freq := lookdownz(freq: 1_000, 500, 250, 125)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 1_000, 500, 250, 125)
+                12, 6, 1:
+                    case freq
+                        250, 125, 63, 31:
+                            freq := lookdownz(freq: 250, 125, 63, 31)
+                        other:
+                            curr_freq &= core#SEL_BITS
+                            return lookupz(curr_freq: 250, 125, 63, 31)
+    freq := ((curr_freq & core#SEL_MASK) | freq)
+    writereg(core#HP_FILT_CUTOFF, 1, @freq)
+
 PUB AccelInt{}: flag 'TODO
 ' Flag indicating accelerometer interrupt asserted
 '   Returns TRUE if interrupt asserted, FALSE if not
     flag := 0
+
+PUB AccelLowNoiseMode(mode): curr_mode    'XXX tentatively named
+' Set accelerometer low noise mode
+'   Valid values:
+'       NORMAL (0), LOWNOISE (1)
+'   Any other value polls the chip and returns the current setting
+'   NOTE: When mode is LOWNOISE, range is limited to +/- 4g
+'       This also affects set interrupt thresholds
+'       (i.e., values outside 4g would never be reached)
+    curr_mode := 0
+    readreg(core#CTRL_REG1, 1, @curr_mode)
+    case mode
+        0, 1:
+            mode <<= core#LNOISE
+        other:
+            return ((curr_mode >> core#LNOISE) & 1)
+
+    cacheopmode{}                               ' switch to stdby to mod regs
+    mode := ((curr_mode & core#LNOISE_MASK) | mode)
+    writereg(core#CTRL_REG1, 1, @mode)
+    restoreopmode{}                             ' restore original opmode
 
 PUB AccelLowPassFilter(state): curr_state
 ' Enable accelerometer data low-pass filter
@@ -283,6 +517,27 @@ PUB AccelOpMode(mode): curr_mode
     mode := ((curr_mode & core#ACTIVE_MASK) | mode)
     writereg(core#CTRL_REG1, 1, @mode)
 
+PUB AccelPowerMode(mode): curr_mode ' XXX tentatively named
+' Set accelerometer power mode/oversampling mode, when active
+'   Valid values:
+'       NORMAL (0): Normal
+'       LONOISE_LOPWR (1): Low noise low power
+'       HIGHRES (2): High resolution
+'       LOPWR (3): Low power
+'   Any other value polls the chip and returns the current setting
+    curr_mode := 0
+    readreg(core#CTRL_REG2, 1, @curr_mode)
+    case mode
+        NORMAL, LONOISE_LOPWR, HIGHRES, LOPWR:
+        other:
+            return curr_mode & core#MODS_BITS
+
+    mode := ((curr_mode & core#MODS_MASK) | mode)
+
+    cacheopmode{}                               ' switch to stdby to mod regs
+    writereg(core#CTRL_REG2, 1, @mode)
+    restoreopmode{}                             ' restore original opmode
+
 PUB AccelScale(g): curr_scale
 ' Sets the full-scale range of the Accelerometer, in g's
 '   Valid values: *2, 4, 8
@@ -302,6 +557,84 @@ PUB AccelScale(g): curr_scale
     writereg(core#XYZ_DATA_CFG, 1, @g)
     restoreopmode{}                             ' restore original opmode
 
+PUB AccelSelfTest(state): curr_state
+' Enable accelerometer self-test
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+'   During self-test, the output data changes approximately as follows
+'       (typ. values @ 4g full-scale)
+'       X: +0.085g (44LSB * 1953 micro-g per LSB)
+'       Y: +0.119g (61LSB * 1953 micro-g per LSB)
+'       Z: +0.765g (392LSB * 1953 micro-g per LSB)
+    curr_state := 0
+    readreg(core#CTRL_REG2, 1, @curr_state)
+    case ||(state)
+        0, 1:
+            state := ||(state) << core#ST
+        other:
+            return (((curr_state >> core#ST) & 1) == 1)
+
+    cacheopmode{}
+    state := ((curr_state & core#ST_MASK) | state)
+    writereg(core#CTRL_REG2, 1, @state)
+    restoreopmode{}
+
+PUB AccelSleepPwrMode(mode): curr_mode
+' Set accelerometer power mode/oversampling mode, when sleeping
+'   Valid values:
+'       NORMAL (0): Normal
+'       LONOISE_LOPWR (1): Low noise low power
+'       HIGHRES (2): High resolution
+'       LOPWR (3): Low power
+'   Any other value polls the chip and returns the current setting
+    curr_mode := 0
+    readreg(core#CTRL_REG2, 1, @curr_mode)
+    case mode
+        NORMAL, LONOISE_LOPWR, HIGHRES, LOPWR:
+            mode <<= core#SMODS
+        other:
+            return ((curr_mode >> core#SMODS) & core#SMODS_BITS)
+
+    cacheopmode{}
+    mode := ((curr_mode & core#SMODS_MASK) | mode)
+    writereg(core#CTRL_REG2, 1, @mode)
+    restoreopmode{}
+
+PUB AutoSleep(state): curr_state
+' Enable automatic transition to sleep state when inactive
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+    curr_state := 0
+    readreg(core#CTRL_REG2, 1, @curr_state)
+    case ||(state)
+        0, 1:
+            state := ||(state) << core#SLPE
+        other:
+            return (((curr_state >> core#SLPE) & 1) == 1)
+
+    cacheopmode{}
+    state := ((curr_state & core#SLPE_MASK) | state)
+    writereg(core#CTRL_REG2, 1, @state)
+    restoreopmode{}
+
+PUB AutoSleepDataRate(rate): curr_rate
+' Set accelerometer output data rate, in Hz, when in sleep mode
+'   Valid values: 1, 6, 12, 50
+'   Any other value polls the chip and returns the current setting
+    curr_rate := 0
+    readreg(core#CTRL_REG1, 1, @curr_rate)
+    case rate
+        1, 6, 12, 50:
+            rate := lookdownz(rate: 50, 12, 6, 1) << core#ASLP_RATE
+        other:
+            curr_rate := ((curr_rate >> core#ASLP_RATE) & core#ASLP_RATE_BITS)
+            return lookupz(curr_rate: 50, 12, 6, 1)
+
+    cacheopmode{}
+    rate := ((curr_rate & core#ASLP_RATE_MASK) | rate)
+    writereg(core#CTRL_REG1, 1, @rate)
+    restoreopmode{}
+
 PUB CalibrateAccel{} | acceltmp[3], axis, ax, ay, az, samples, scale_orig, drate_orig, fifo_orig, scl
 ' Calibrate the accelerometer
 '   NOTE: The accelerometer must be oriented with the package top facing up
@@ -313,10 +646,10 @@ PUB CalibrateAccel{} | acceltmp[3], axis, ax, ay, az, samples, scale_orig, drate
     fifo_orig := fifomode(-2)
 
     fifomode(BYPASS)                            ' Bypass FIFO, set accel
-    accelscale(2)                               ' to most sensitive scale
-    acceldatarate(100)                          ' and 100Hz data rate
+    accelscale(CAL_XL_SCL)                      ' to most sensitive scale
+    acceldatarate(CAL_XL_DR)                    ' and 100Hz data rate
     scl := _ares / 2                            ' Scale down to 2mg/LSB
-    samples := 32
+    samples := CAL_XL_DR
     repeat samples
         repeat until acceldataready{}
         acceldata(@ax, @ay, @az)
@@ -426,6 +759,11 @@ PUB ClickLatency(ltime): curr_ltime | time_res, odr
         time_res := 2_500 #> ((1_000000/odr) * 2) <# 40_000
     else
         time_res := 1_250 #> ((1_000000/odr) / 2) <# 10_000
+
+    if opmode(-2) == BOTH                       ' if both sensors are enabled,
+        time_res *= 2                           '   effective ODR is half, and
+                                                '   timing-sensitive regs
+                                                '   change proprotionately
 
     ' check that the parameter is between 0 and the max time range for
     '   the current AccelDataRate() setting
@@ -542,6 +880,11 @@ PUB ClickTime(ctime): curr_ctime | time_res, odr
     else
         time_res := 0_625 #> ((1_000000/odr) / 4) <# 5_000
 
+    if opmode(-2) == BOTH                       ' if both sensors are enabled,
+        time_res *= 2                           '   effective ODR is half, and
+                                                '   timing-sensitive regs
+                                                '   change proprotionately
+
     ' check that the parameter is between 0 and the max time range for
     '   the current AccelDataRate() setting
     if (ctime => 0) and (ctime =< (time_res * 255))
@@ -573,6 +916,11 @@ PUB DoubleClickWindow(dctime): curr_dctime | time_res, odr
         time_res := 2_500 #> ((1_000000/odr) * 2) <# 40_000
     else
         time_res := 1_250 #> ((1_000000/odr) / 2) <# 10_000
+
+    if opmode(-2) == BOTH                       ' if both sensors are enabled,
+        time_res *= 2                           '   effective ODR is half, and
+                                                '   timing-sensitive regs
+                                                '   change proprotionately
 
     ' check that the parameter is between 0 and the max time range for
     '   the current AccelDataRate() setting
@@ -656,6 +1004,153 @@ PUB FIFOUnreadSamples: nr_samples
     nr_samples := 0
     readreg(core#F_STATUS, 1, @nr_samples)
     return (nr_samples & core#F_CNT_BITS)
+
+PUB FreeFallAxisEnabled(mask): curr_mask
+' Enable free-fall detection, per axis mask
+'   Valid values: %000..%111 (ZYX)
+'   Any other value polls the chip and returns the current setting
+    curr_mask := 0
+    readreg(core#FFMT_CFG, 1, @curr_mask)
+    case mask
+        %000..%111:
+            mask <<= core#FEFE
+        other:
+            return ((curr_mask >> core#FEFE) & core#FEFE_BITS)
+
+    mask := ((curr_mask & core#FEFE_MASK) | mask)
+    writereg(core#FFMT_CFG, 1, @mask)
+
+PUB FreeFallThresh(thresh): curr_thr
+' Set free-fall threshold, in micro-g's
+'   Valid values: 0..8_001000 (0..8g's)
+'   Any other value polls the chip and returns the current setting
+    curr_thr := 0
+    readreg(core#FFMT_THS, 1, @curr_thr)
+    case thresh
+        0..8_001000:
+            thresh /= 0_063000
+        other:
+            return ((curr_thr & core#FF_THS_BITS) * 0_063000)
+
+    thresh := ((curr_thr & core#FF_THS_MASK) | thresh)
+    writereg(core#FFMT_THS, 1, @thresh)
+
+PUB FreeFallTime(fftime): curr_time | odr, time_res, max_dur
+' Set minimum time duration required to recognize free-fall, in microseconds
+'   Valid values: 0..maximum in table below:
+'                           AccelPowerMode():
+'       AccelDataRate():    NORMAL     LONOISE_LOPWR   HIGHRES     LOPWR
+'       800Hz               319_000    319_000         319_000     319_000
+'       400                 638_000    638_000         638_000     638_000
+'       200                 1_280      1_280           638_000     1_280
+'       100                 2_550      2_550           638_000     2_550
+'       50                  5_100      5_100           638_000     5_100
+'       12                  5_100      20_400          638_000     20_400
+'       6                   5_100      20_400          638_000     40_800
+'       1                   5_100      20_400          638_000     40_800
+'   Any other value polls the chip and returns the current setting
+    odr := acceldatarate(-2)
+    case accelpowermode(-2)
+        NORMAL:
+            time_res := 1_250 #> (1_000000/odr) <# 20_000
+        LONOISE_LOPWR:
+            time_res := 1_250 #> (1_000000/odr) <# 80_000
+        HIGHRES:
+            time_res := 1_250 #> (1_000000/odr) <# 2_500
+        LOPWR:
+            time_res := 1_250 #> (1_000000/odr) <# 160_000
+
+    max_dur := (time_res * 255)
+    if opmode(-2) == BOTH                       ' if both sensors are enabled,
+        time_res *= 2                           '   effective ODR is half, and
+                                                '   timing-sensitive regs
+                                                '   change proprotionately
+
+    case fftime
+        0..max_dur:
+            fftime /= time_res
+            writereg(core#FFMT_CNT, 1, @fftime)
+        other:
+            curr_time := 0
+            readreg(core#FFMT_CNT, 1, @curr_time)
+            return (curr_time * time_res)
+
+PUB InactInt(mask): curr_mask
+' Set inactivity interrupt mask
+'   Valid values:
+'       Bits [4..0]
+'       4: Wake on transient interrupt
+'       3: Wake on orientation interrupt
+'       2: Wake on pulse/click/tap interrupt
+'       1: Wake on free-fall/motion interrupt
+'       0: Wake on vector-magnitude interrupt
+'   Any other value polls the chip and returns the current setting
+    curr_mask := 0
+    readreg(core#CTRL_REG3, 1, @curr_mask)
+    case mask
+        %00000..%11111:
+            mask <<= core#WAKE
+        other:
+            return ((curr_mask >> core#WAKE) & core#WAKE_BITS)
+
+    cacheopmode{}
+    mask := ((curr_mask & core#WAKE_MASK) | mask)
+    writereg(core#CTRL_REG3, 1, @mask)
+    restoreopmode{}
+
+PUB InactTime(itime): curr_itime | max_dur, time_res
+' Set inactivity time, in milliseconds
+'   Valid values:
+'       0..163_200 (AccelDataRate() == 1)
+'       0..81_600 (AccelDataRate() == all other settings)
+'   Any other value polls the chip and returns the current setting
+'   NOTE: Setting this to 0 will generate an interrupt when the acceleration
+'       measures less than that set with InactThresh()
+    if acceldatarate(-2) == 1
+        time_res := 640                         ' 640ms time step for 1Hz ODR
+    else
+        time_res := 320                         ' 320ms time step for others
+    max_dur := (time_res * 255)                 ' calc max possible duration
+    if opmode(-2) == BOTH                       ' if both sensors are enabled,
+        time_res *= 2                           '   effective ODR is half, and
+                                                '   timing-sensitive regs
+                                                '   change proprotionately
+    case itime
+        0..max_dur:
+            cacheopmode{}
+            itime := (itime / time_res)
+            writereg(core#ASLP_CNT, 1, @itime)
+            restoreopmode{}
+        other:
+            curr_itime := 0
+            readreg(core#ASLP_CNT, 1, @curr_itime)
+            return (curr_itime * time_res)
+
+PUB InFreeFall{}: flag
+' Flag indicating device is in free-fall
+'   Returns:
+'       TRUE (-1): device is in free-fall
+'       FALSE (0): device isn't in free-fall
+    flag := 0
+    readreg(core#FFMT_SRC, 1, @flag)
+    return (((flag >> core#FEA) & 1) == 1)
+
+PUB IntActiveState(state): curr_state
+' Set interrupt pin active state/logic level
+'   Valid values: LOW (0), HIGH (1)
+'   Any other value polls the chip and returns the current setting
+    curr_state := 0
+    readreg(core#CTRL_REG3, 1, @curr_state)
+    case state
+        LOW, HIGH:
+            state <<= core#IPOL
+        other:
+            return ((curr_state >> core#IPOL) & 1)
+
+    cacheopmode{}
+    state := ((curr_state & core#IPOL_MASK) | state)
+    writereg(core#CTRL_REG3, 1, @state)
+    restoreopmode{}
 
 PUB IntClear(clear_mask) | i, reg_nr, tmp
 ' Clear interrupts, per clear_mask
@@ -1085,6 +1580,38 @@ PUB OpMode(mode): curr_mode
     mode := ((curr_mode & core#M_HMS_MASK) | mode)
     writereg(core#M_CTRL_REG1, 1, @mode)
 
+PUB Orientation{}: curr_or
+' Current orientation
+'   Returns:
+'       %000: portrait-up, front-facing
+'       %001: portrait-up, back-facing
+'       %010: portrait-down, front-facing
+'       %011: portrait-down, back-facing
+'       %100: landscape-right, front-facing
+'       %101: landscape-right, back-facing
+'       %110: landscape-left, front-facing
+'       %111: landscape-left, back-facing
+    curr_or := 0
+    readreg(core#PL_STATUS, 1, @curr_or)
+    return (curr_or & core#LAPOBAFRO_BITS)
+
+PUB OrientDetect(state): curr_state
+' Enable orientation detection
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+    curr_state := 0
+    readreg(core#PL_CFG, 1, @curr_state)
+    case ||(state)
+        0, 1:
+            state := ||(state) << core#PL_EN
+        other:
+            return ((curr_state >> core#PL_EN) & 1) == 1
+
+    state := ((curr_state & core#PL_EN_MASK) | state)
+    cacheopmode{}                               ' switch to stdby to mod regs
+    writereg(core#PL_CFG, 1, @state)
+    restoreopmode{}                             ' restore original opmode
+
 PUB Reset{} | tmp
 ' Perform hard or soft-reset
     if lookdown(_RES: 0..31)
@@ -1097,6 +1624,13 @@ PUB Reset{} | tmp
         tmp := core#SRESET
         writereg(core#CTRL_REG2, 1, @tmp)
         time.usleep(core#TPOR)
+
+PUB SysMode{}: sysmod 'XXX temporary
+' Read current system mode
+'   STDBY, ACTIVE, SLEEP
+    sysmod := 0
+    readreg(core#SYSMOD_REG, 1, @sysmod)
+    return (sysmod & core#SYSMOD_BITS)
 
 PUB Temperature{}: temp
 ' Read chip temperature
@@ -1132,6 +1666,69 @@ PUB TempScale(scale): curr_scale
             _temp_scale := scale
         other:
             return _temp_scale
+
+PUB TransCount(tcnt): curr_tcnt
+' Set minimum number of debounced samples that must be greater than the
+'   threshold set by TransThresh() to generate an interrupt
+'   Valid values: 0..255
+'   Any other value polls the chip and returns the current setting
+    case tcnt
+        0..255:
+            writereg(core#TRANSIENT_CNT, 1, @tcnt)
+        other:
+            curr_tcnt := 0
+            readreg(core#TRANSIENT_CNT, 1, @curr_tcnt)
+
+PUB TransAxisEnabled(axis_mask): curr_mask
+' Enable transient acceleration detection, per mask
+'   Valid values:
+'       Bits [2..0]
+'       2: Enable transient acceleration interrupt on Z-axis
+'       1: Enable transient acceleration interrupt on Y-axis
+'       0: Enable transient acceleration interrupt on X-axis
+'   Any other value polls the chip and returns the current setting
+    curr_mask := 0
+    readreg(core#TRANSIENT_CFG, 1, @curr_mask)
+    case axis_mask
+        %000..%111:
+            axis_mask <<= core#TEFE
+        other:
+            return ((curr_mask >> core#TEFE) & core#TEFE_MASK)
+
+    cacheopmode{}
+    axis_mask := ((curr_mask & core#TEFE_MASK) | axis_mask) | 1 << core#TELE
+    writereg(core#TRANSIENT_CFG, 1, @axis_mask)
+    restoreopmode{}
+
+PUB TransInterrupt{}: int_src
+' Read transient acceleration interrupt(s)
+'   Bits [6..0]
+'   6: One or more interrupts asserted
+'   5: Z-axis transient interrupt
+'   4: Z-axis transient interrupt polarity (0: positive, 1: negative)
+'   3: Y-axis transient interrupt
+'   2: Y-axis transient interrupt polarity (0: positive, 1: negative)
+'   1: X-axis transient interrupt
+'   0: X-axis transient interrupt polarity (0: positive, 1: negative)
+    int_src := 0
+    readreg(core#TRANSIENT_SRC, 1, @int_src)
+
+PUB TransThresh(thr): curr_thr
+' Set threshold for transient acceleration detection, in micro-g's
+'   Valid values: 0..8_001000 (0..8gs)
+'   Any other value polls the chip and returns the current setting
+'   NOTE: If AccelPowerMode() == LOWNOISE, the maximum value is reduced
+'       to 4g's (4_000000)
+    curr_thr := 0
+    readreg(core#TRANSIENT_THS, 1, @curr_thr)
+    case thr
+        0..8_001000:
+            thr /= 0_063000
+        other:
+            return ((curr_thr & core#THS_BITS) * 0_063000)
+
+    thr := ((curr_thr & core#THS_MASK) | thr)
+    writereg(core#TRANSIENT_THS, 1, @thr)
 
 PRI cacheOpMode{}
 ' Store the current operating mode, and switch to standby if different
