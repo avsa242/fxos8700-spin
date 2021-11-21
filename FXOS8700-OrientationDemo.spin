@@ -20,6 +20,7 @@ CON
     LED         = cfg#LED1
     SER_BAUD    = 115_200
 
+' I2C configuration
     SCL_PIN     = 28
     SDA_PIN     = 29
     I2C_HZ      = 400_000                       ' max is 400_000
