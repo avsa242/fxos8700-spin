@@ -39,7 +39,7 @@ OBJ
     cfg     : "core.con.boardcfg.flip"
     ser     : "com.serial.terminal.ansi"
     time    : "time"
-    accel   : "sensor.imu.6dof.fxos8700.i2c"
+    accel   : "sensor.imu.6dof.fxos8700"
     int     : "string.integer"
 
 VAR

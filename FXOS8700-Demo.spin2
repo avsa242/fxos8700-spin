@@ -40,7 +40,7 @@ OBJ
 
     cfg : "core.con.boardcfg.p2eval"
     ser : "com.serial.terminal.ansi"
-    imu : "sensor.imu.6dof.fxos8700.i2c"
+    imu : "sensor.imu.6dof.fxos8700"
     int : "string.integer"
 
 PUB Main()

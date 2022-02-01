@@ -35,7 +35,7 @@ OBJ
     ser     : "com.serial.terminal.ansi"
     time    : "time"
     int     : "string.integer"
-    accel   : "sensor.imu.6dof.fxos8700.i2c"
+    accel   : "sensor.imu.6dof.fxos8700"
 
 PUB Main{} | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_clicked
 

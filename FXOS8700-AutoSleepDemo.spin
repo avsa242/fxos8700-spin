@@ -40,7 +40,7 @@ OBJ
     ser     : "com.serial.terminal.ansi"
     time    : "time"
     int     : "string.integer"
-    accel   : "sensor.imu.6dof.fxos8700.i2c"
+    accel   : "sensor.imu.6dof.fxos8700"
     core    : "core.con.mma8452q"
 
 VAR

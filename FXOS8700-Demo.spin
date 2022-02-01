@@ -42,7 +42,7 @@ OBJ
     cfg : "core.con.boardcfg.flip"
     ser : "com.serial.terminal.ansi"
     time: "time"
-    imu : "sensor.imu.6dof.fxos8700.i2c"
+    imu : "sensor.imu.6dof.fxos8700"
     int : "string.integer"
 
 PUB Main{}
