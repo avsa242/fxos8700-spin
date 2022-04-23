@@ -217,9 +217,9 @@ PUB AccelBias(bias_x, bias_y, bias_z, rw=R) | tmp
     case rw
         R:
             readreg(core.OFF_X, 3, @tmp)
-            long[bias_x] := ~tmp.byte[2]        ' signed 8-bit
-            long[bias_y] := ~tmp.byte[1]
-            long[bias_z] := ~tmp.byte[0]
+            long[bias_x] := (tmp.byte[2] signx 7)   ' signed 8-bit
+            long[bias_y] := (tmp.byte[1] signx 7)
+            long[bias_z] := (tmp.byte[0] signx 7)
         W:
             { scale ADC words down to bias reg range }
             bias_x /= 512
@@ -235,9 +235,9 @@ PUB AccelBias(bias_x, bias_y, bias_z, rw=R) | tmp
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Reads the Accelerometer output registers
     readreg(core.OUT_X_MSB, 6, @tmp)
-    long[ptr_x] := ~~tmp.word[2]                ' signed 16-bit
-    long[ptr_y] := ~~tmp.word[1]
-    long[ptr_z] := ~~tmp.word[0]
+    long[ptr_x] := (tmp.word[2] signx 15)       ' signed 16-bit
+    long[ptr_y] := (tmp.word[1] signx 15)
+    long[ptr_z] := (tmp.word[0] signx 15)
 
 PUB AccelDataOverrun(): flag
 ' Indicates previously acquired data has been overwritten
@@ -1029,7 +1029,7 @@ PUB GyroData(x, y, z)
 PUB GyroDataRate(rate=-2)
 ' dummy method
 
-PUB GyroDataReady{}
+PUB GyroDataReady()
 ' dummy method
 
 PUB GyroScale(scale=-2)
@@ -1226,9 +1226,9 @@ PUB MagBias(bias_x, bias_y, bias_z, rw=R) | tmp[2]
     case rw
         R:
             readreg(core.M_OFF_X_MSB, 6, @tmp)
-            long[bias_x] := ~~tmp.word[2]
-            long[bias_y] := ~~tmp.word[1]
-            long[bias_z] := ~~tmp.word[0]
+            long[bias_x] := (tmp.word[2] signx 15)
+            long[bias_y] := (tmp.word[1] signx 15)
+            long[bias_z] := (tmp.word[0] signx 15)
         W:
             tmp.word[2] := bias_x := (-16384 #> bias_x <# 16383) << 1
             tmp.word[1] := bias_y := (-16384 #> bias_y <# 16383) << 1
@@ -1244,9 +1244,9 @@ PUB MagData(mx, my, mz) | tmp[2]
 ' Read the Magnetometer output registers
     tmp := 0
     readreg(core.M_OUT_X_MSB, 6, @tmp)
-    long[mx] := ~~tmp.word[2]
-    long[my] := ~~tmp.word[1]
-    long[mz] := ~~tmp.word[0]
+    long[mx] := (tmp.word[2] signx 15)
+    long[my] := (tmp.word[1] signx 15)
+    long[mz] := (tmp.word[0] signx 15)
 
 PUB MagDataOverrun(): flag
 ' Flag indicating magnetometer data has overrun
