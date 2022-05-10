@@ -5,7 +5,7 @@
     Description: Driver for the FXOS8700 6DoF IMU
     Copyright (c) 2022
     Started Sep 19, 2020
-    Updated Apr 23, 2021
+    Updated May 10, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -120,7 +120,7 @@ OBJ
 VAR
 
     long _ares, _abiasraw[ACCEL_DOF]
-    long _mres, _mbiasraw[MAG_DOF]
+    long _mres[MAG_DOF], _mbiasraw[MAG_DOF]
     byte _addr_bits, _temp_scale
     byte _opmode_orig
     byte _RES
@@ -175,6 +175,7 @@ PUB Preset_Active{}
     opmode(BOTH)
     accelscale(2)
     acceldatarate(50)
+    magscale(12)
 
 PUB Preset_ClickDet{}
 ' Preset settings for click detection
@@ -1468,6 +1469,7 @@ PUB MagScale(scale): curr_scl
 '   Valid values: N/A (fixed at 12Gs, 1200uT)
 '   Returns: 12
 '   NOTE: For API-compatibility only
+    longfill(@_mres, MRES_GAUSS, MAG_DOF)
     return 12
 
 PUB MagThreshInt{}: int_src
@@ -1520,13 +1522,29 @@ PUB MagThreshIntsEnabled(state): curr_state
     state := ((curr_state & core#THS_INT_EN_MASK) | state)
     writereg(core#M_THS_CFG, 1, @state)
 
-PUB MagWord2Gauss(mag_word): mag_gauss
-' Convert magnetometer ADC word to Gauss
-    return (mag_word * MRES_GAUSS)
+PUB MagXWord2Gauss(mag_word): mag_gauss
+' Convert magnetometer X-axis ADC word to Gauss
+    return (mag_word * _mres[X_AXIS])
 
-PUB MagWord2Tesla(mag_word): mag_tesla
-' Convert magnetometer ADC word to Teslas
-    return (mag_word * MRES_MICROTESLA)
+PUB MagYWord2Gauss(mag_word): mag_gauss
+' Convert magnetometer Y-axis ADC word to Gauss
+    return (mag_word * _mres[Y_AXIS])
+
+PUB MagZWord2Gauss(mag_word): mag_gauss
+' Convert magnetometer Z-axis ADC word to Gauss
+    return (mag_word * _mres[Z_AXIS])
+
+PUB MagXWord2Tesla(mag_word): mag_tesla
+' Convert magnetometer X-axis ADC word to Teslas
+    return (mag_word * _mres[X_AXIS]) / 10_000
+
+PUB MagYWord2Tesla(mag_word): mag_tesla
+' Convert magnetometer Y-axis ADC word to Teslas
+    return (mag_word * _mres[Y_AXIS]) / 10_000
+
+PUB MagZWord2Tesla(mag_word): mag_tesla
+' Convert magnetometer Z-axis ADC word to Teslas
+    return (mag_word * _mres[Z_AXIS]) / 10_000
 
 PUB OpMode(mode): curr_mode
 ' Set operating mode
