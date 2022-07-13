@@ -3,7 +3,7 @@
     Filename: FXOS8700-Demo.spin
     Author: Jesse Burt
     Description: FXOS8700 driver demo
-        * 9DoF data output
+        * 6DoF data output
     Copyright (c) 2022
     Started Sep 19, 2020
     Updated Jul 13, 2022
