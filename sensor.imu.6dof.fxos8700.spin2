@@ -10,6 +10,7 @@
     --------------------------------------------
 }
 #include "sensor.imu.common.spin2h"
+#include "sensor.temp.common.spin2h"
 
 CON
 
@@ -116,19 +117,18 @@ OBJ
 
 VAR
 
-    byte _temp_scale
     byte _opmode_orig
     byte _RES
 
 PUB Null()
 ' This is not a top-level object
 
-PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS, RES_PIN): status
+PUB Startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS, RES_PIN): status
 ' Start using custom pins, I2C bus freq, slave address bits
 '   NOTE: RES_PIN is optional; specify -1, if unused
     if lookdown(SCL_PIN: 0..63) and lookdown(SDA_PIN: 0..63) and {
-}   I2C_HZ <= core.I2C_MAX_FREQ
-        if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
+}   I2C_FREQ <= core.I2C_MAX_FREQ
+        if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_FREQ))
             _RES := RES_PIN
             waitus(core.TPOR)
             ' Unfortunately, the chip's mapping of SAx bits to the slave address isn't
@@ -1208,7 +1208,7 @@ PUB MagBias(bias_x, bias_y, bias_z, rw=R) | tmp[2]
 ' Read or write/manually set magnetometer calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
-'           bias_x, bias_y, bias_z: -16384..16384
+'           bias_x, bias_y, bias_z: -16384..16383
 '       When rw == R (0, read)
 '           bias_x, bias_y, bias_z:
 '               Pointers to variables to hold current settings for respective
@@ -1574,7 +1574,7 @@ PUB SysMode(): sysmod 'XXX temporary
     readreg(core.SYSMOD_REG, 1, @sysmod)
     return (sysmod & core.SYSMOD_BITS)
 
-PUB Temperature(): temp
+PUB TempData(): temp
 ' Read chip temperature
 '   Returns: Temperature in hundredths of a degree Celsius (1000 = 10.00 deg C)
 '   NOTE: OpMode() must be set to MAG (1) or BOTH (3) to read data from
@@ -1583,31 +1583,25 @@ PUB Temperature(): temp
 '       MagDataRate() settings
     temp := 0
     readreg(core.TEMP, 1, @temp)
-    temp *= 96                                  ' Res is 0.96C per LSB
+
+PUB TempWord2Deg(adc_word): temp
+' Convert ADC word to temperature in degrees of chosen scale
+    temp := (adc_word * 0_96)
     case _temp_scale
         C:
+            return
         F:
-            temp := ((temp * 9_00) / 5_00) + 32_00
+            return ((temp * 9_00) / 5_00) + 32_00
         K:
-            temp += 273_15
+            return (temp + 273_15)
+        other:
+            return FALSE
 
 PUB TempDataReady(): flag
 ' Flag indicating new temperature sensor data available
 '   Returns: TRUE (-1)
 '   NOTE: For API compatibility only
     return TRUE
-
-PUB TempScale(scale=-2): curr_scale
-' Set temperature scale used by Temperature method
-'   Valid values:
-'      *C (0): Celsius
-'       F (1): Fahrenheit
-'   Any other value returns the current setting
-    case scale
-        C, F, K:
-            _temp_scale := scale
-        other:
-            return _temp_scale
 
 PUB TransCount(tcnt=-2): curr_tcnt
 ' Set minimum number of debounced samples that must be greater than the
@@ -1723,23 +1717,21 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
             return
 DAT
 {
-TERMS OF USE: MIT License
+Copyright 2022 Jesse Burt
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 }
+
