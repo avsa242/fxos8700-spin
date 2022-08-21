@@ -20,7 +20,7 @@ CON
     LED         = cfg#LED1
     SER_BAUD    = 115_200
 
-' I2C configuration
+    { I2C configuration }
     SCL_PIN     = 28
     SDA_PIN     = 29
     I2C_FREQ    = 400_000                       ' max is 400_000
@@ -71,7 +71,7 @@ PUB main{} | intsource, temp, sysmod
     ' When the sensor goes to sleep after approx. 5 seconds, the change
     '   in data rate is visible as a slowed update of the display.
     ' To wake the sensor, shake it along the X and/or Y axes
-    '   by at least 0.252g's.
+    '   by at least the amount set in transthresh() above.
     ' When the sensor is awake, the LED should be on.
     ' When the sensor goes to sleep, it should turn off.
     repeat

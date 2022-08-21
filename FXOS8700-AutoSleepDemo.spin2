@@ -69,7 +69,7 @@ PUB main() | intsource, temp, sysmod
     ' When the sensor goes to sleep after approx. 5 seconds, the change
     '   in data rate is visible as a slowed update of the display.
     ' To wake the sensor, shake it along the X and/or Y axes
-    '   by at least 0.252g's.
+    '   by at least the amount set in transthresh() above.
     ' When the sensor is awake, the LED should be on.
     ' When the sensor goes to sleep, it should turn off.
     repeat
