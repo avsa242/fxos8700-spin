@@ -423,7 +423,7 @@ CON
 
 ' $79 RESERVED
 
-PUB Null{}
+PUB null{}
 ' This is not a top-level object
 
 DAT
