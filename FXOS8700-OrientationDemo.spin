@@ -6,7 +6,7 @@
         detection functionality.
     Copyright (c) 2022
     Started Nov 20, 2021
-    Updated Aug 16, 2022
+    Updated Oct 2, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -34,35 +34,35 @@ OBJ
     cfg     : "core.con.boardcfg.flip"
     ser     : "com.serial.terminal.ansi"
     time    : "time"
-    accel   : "sensor.imu.6dof.fxos8700"
+    sensor  : "sensor.imu.6dof.fxos8700"
 
-PUB Main{}
+PUB main{}
 
     setup{}
-    accel.preset_active{}                       ' default settings, but enable
+    sensor.preset_active{}                       ' default settings, but enable
                                                 ' sensor power, and set
                                                 ' scale factors
-    accel.orientdetect(true)                    ' enable orientation detection
+    sensor.orient_detect_ena(true)                    ' enable orientation detection
 
     repeat
         ser.position(0, 3)
         ser.str(string("Orientation: "))
-        case accel.orientation{}
-            accel#PORTUP_FR:
+        case sensor.orientation{}
+            sensor#PORTUP_FR:
                 ser.str(string("Portrait-up, front-facing"))
-            accel#PORTUP_BK:
+            sensor#PORTUP_BK:
                 ser.str(string("Portrait-up, back-facing"))
-            accel#PORTDN_FR:
+            sensor#PORTDN_FR:
                 ser.str(string("Portrait-down, front-facing"))
-            accel#PORTDN_BK:
+            sensor#PORTDN_BK:
                 ser.str(string("Portrait-down, back-facing"))
-            accel#LANDRT_FR:
+            sensor#LANDRT_FR:
                 ser.str(string("Landscape-right, front-facing"))
-            accel#LANDRT_BK:
+            sensor#LANDRT_BK:
                 ser.str(string("Landscape-right, back-facing"))
-            accel#LANDLT_FR:
+            sensor#LANDLT_FR:
                 ser.str(string("Landscape-left, front-facing"))
-            accel#LANDLT_BK:
+            sensor#LANDLT_BK:
                 ser.str(string("Landscape-left, back-facing"))
             other:
         ser.clearline{}
@@ -70,21 +70,21 @@ PUB Main{}
         if (ser.rxcheck{} == "c")               ' press the 'c' key in the demo
             calibrate{}                         ' to calibrate sensor offsets
 
-PUB Calibrate{}
+PUB calibrate{}
 
     ser.position(0, 5)
     ser.str(string("Calibrating..."))
-    accel.calibrateaccel{}
+    sensor.calibrate_accel{}
     ser.positionx(0)
     ser.clearline{}
 
-PUB Setup{}
+PUB setup{}
 
     ser.start(SER_BAUD)
     time.msleep(30)
     ser.clear{}
     ser.strln(string("Serial terminal started"))
-    if accel.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS, RES_PIN)
+    if sensor.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS, RES_PIN)
         ser.strln(string("FXOS8700 driver started (I2C)"))
     else
         ser.strln(string("FXOS8700 driver failed to start - halting"))

@@ -3,10 +3,10 @@
     Filename: FXOS8700-IntDemo.spin2
     Author: Jesse Burt
     Description: Demo of the FXOS8700 driver (P2 version)
-        Interrupt functionality
+        * Interrupt functionality
     Copyright (c) 2022
     Started Sep 26, 2020
-    Updated Aug 16, 2022
+    Updated Oct 2, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -35,32 +35,30 @@ CON
 
 OBJ
 
-    cfg : "core.con.boardcfg.p2eval"      ' Clock setup, I/O pins, etc
+    cfg : "core.con.boardcfg.p2eval"
     ser : "com.serial.terminal.ansi"
-    imu : "sensor.imu.6dof.fxos8700"
+    sensor : "sensor.imu.6dof.fxos8700"
 
 PUB main() | i
 
     setup()
-    imu.preset_active()
-    imu.tempscale(C)
+    sensor.preset_active()
+    sensor.temp_scale(C)
 
-    imu.accelscale(2)                   ' 2, 4, 8 (g's)
-    imu.acceldatarate(50)               ' 1, 6, 12, 50, 100, 200, 400, 800
-    imu.intmask(%11111111)
+    sensor.accel_scale(2)                   ' 2, 4, 8 (g's)
+    sensor.accel_data_rate(50)               ' 1, 6, 12, 50, 100, 200, 400, 800
+    sensor.int_mask(%11111111)
 
-    { set up magnetometer interrupts }
-    imu.magintpersistence(0)
-    imu.magintthreshx(1_000000)         '\  thresholds
-    imu.magintthreshy(1_000000)         ' - 0..32_767000 (microGauss, unsigned)
-    imu.magintthreshz(1_000000)         '/
-                                        ' *NOTE: The chip doesn't account for
-                                        ' bias offsets when comparing the
-                                        ' set thresholds to the measurement
-                                        ' data. They are compared to the
-                                        ' uncorrected data only.
-    imu.magthreshintsenabled(true)
-    imu.magthreshintmask(%111)
+    { set up magnetometer interrupts; 0..32_767000 microGauss thresholds }
+    { *NOTE: The chip doesn't account for bias offsets when comparing the set thresholds to the
+        measurement data. They are compared to the uncorrected data only. }
+    sensor.mag_int_duration()
+    sensor.mag_int_set_thresh_x(1_000000)
+    sensor.mag_int_set_thresh_y(1_000000)
+    sensor.mag_int_set_thresh_z(1_000000)
+
+    sensor.mag_thresh_int_ena(true)
+    sensor.mag_thresh_int_mask(%111)
 
     ser.position(0, 3)
     repeat i from 0 to 2
@@ -69,19 +67,20 @@ PUB main() | i
 
     repeat
         if (ser.rxcheck() == "c")
-            calibrate()
+            cal_accel{}
+            cal_mag{}
 
         ser.position(0, 4)
-        acceldata()
-        ser.printf(@"Accel int: %08.8b\n\r\n\r", imu.interrupt())
-        magdata()
-        ser.printf(@"Mag int: %03.3b\n\r\n\r", imu.magint())
-        tempdata()
+        show_accel_data()
+        ser.printf(@"Accel int: %08.8b\n\r\n\r", sensor.interrupt())
+        show_mag_data()
+        ser.printf(@"Mag int: %03.3b\n\r\n\r", sensor.mag_int())
+        show_temp_data()
 
-PUB tempdata() | temp, tscl
+PUB show_temp_data() | temp, tscl
 ' Show temperature data
-    temp := imu.temperature()
-    tscl := lookupz(imu.tempscale(-2): "C", "F")
+    temp := sensor.temperature()
+    tscl := lookupz(sensor.temp_scale(): "C", "F")
     ser.printf(@"Temp. (deg %c): %3.3d.%02.2d\n\r", tscl, (temp / 100), abs(temp // 100))
 
 PUB setup()
@@ -91,13 +90,14 @@ PUB setup()
     ser.clear()
     ser.strln(@"Serial terminal started")
 
-    if imu.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS, RES_PIN)
+    if sensor.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS, RES_PIN)
         ser.strln(@"FXOS8700 driver started")
     else
         ser.strln(@"FXOS8700 driver failed to start - halting")
         repeat
 
-#include "imudemo.common.spin2h"                ' use common IMU demo code for sensor display
+#include "acceldemo.common.spin2h"
+#include "magdemo.common.spin2h"
 
 DAT
 {

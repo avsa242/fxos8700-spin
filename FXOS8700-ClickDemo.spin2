@@ -6,7 +6,7 @@
         click-detection functionality (P2 version)
     Copyright (c) 2022
     Started Nov 20, 2021
-    Updated Aug 15, 2022
+    Updated Oct 2, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -38,13 +38,13 @@ OBJ
 PUB main() | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_clicked
 
     setup()
-    accel.preset_clickdet()                     ' preset settings for
+    accel.preset_click_det()                     ' preset settings for
                                                 ' click-detection
 
     ser.hidecursor()                            ' hide terminal cursor
 
     repeat until (ser.rxcheck() == "q")         ' press q to quit
-        click_src := accel.clickedint()
+        click_src := accel.clicked_int()
         int_act := ((click_src >> 7) & 1)
         dclicked := ((click_src >> 3) & 1)
         sclicked := ((click_src >> 7) & 1)

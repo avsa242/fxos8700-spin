@@ -4,9 +4,9 @@
     Author: Jesse Burt
     Description: Demo of the FXOS8700 driver
         Free-fall detection functionality
-    Copyright (c) 2021
+    Copyright (c) 2022
     Started Nov 20, 2021
-    Updated Nov 20, 2021
+    Updated Oct 2, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -39,7 +39,7 @@ OBJ
     cfg     : "core.con.boardcfg.flip"
     ser     : "com.serial.terminal.ansi"
     time    : "time"
-    accel   : "sensor.imu.6dof.fxos8700"
+    sensor  : "sensor.imu.6dof.fxos8700"
 
 VAR
 
@@ -49,7 +49,7 @@ VAR
 PUB main{} | intsource, temp
 
     setup{}
-    accel.preset_freefall{}                     ' default settings, but enable
+    sensor.preset_freefall{}                    ' default settings, but enable
                                                 ' sensors, set scale factors,
                                                 ' and free-fall parameters
     ser.position(0, 5)
@@ -60,16 +60,16 @@ PUB main{} | intsource, temp
     '   is cleared after the user presses a key
     ' The preset for free-fall detection sets a free-fall threshold of
     '   0.315g's for a minimum time of 30ms. This can be tuned using
-    '   accel.FreeFallThresh() and accel.FreeFallTime():
-    accel.freefallthresh(0_315000)              ' 0.315g's
-    accel.freefalltime(30_000)                  ' 30_000us/30ms
+    '   sensor.FreeFallThresh() and sensor.FreeFallTime():
+    sensor.freefall_thresh(0_315000)            ' 0.315g's
+    sensor.freefall_time(30_000)                ' 30_000us/30ms
     repeat
         ser.position(0, 3)
-        acceldata{}                             ' show accel data
+        show_accel_data{}                       ' show accel data
         if (_intflag)                           ' interrupt triggered
-            intsource := accel.interrupt{}
-            if (intsource & accel#INT_FFALL)    ' free-fall event
-                temp := accel.infreefall{}      ' clear the free-fall interrupt
+            intsource := sensor.interrupt{}
+            if (intsource & sensor#INT_FFALL)   ' free-fall event
+                temp := sensor.in_freefall{}    ' clear the free-fall interrupt
             ser.position(0, 5)
             ser.strln(string("Sensor in free-fall!"))
             ser.str(string("Press any key to reset"))
@@ -81,7 +81,7 @@ PUB main{} | intsource, temp
         if (ser.rxcheck{} == "c")               ' press the 'c' key in the demo
             cal_accel{}                         ' to calibrate sensor offsets
 
-PRI isr{}
+PRI cog_isr{}
 ' Interrupt service routine
     dira[INT1] := 0                             ' INT1 as input
     repeat
@@ -97,13 +97,13 @@ PUB setup{}
     ser.clear{}
     ser.strln(string("Serial terminal started"))
 
-    if (accel.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS, RES_PIN))
+    if (sensor.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS, RES_PIN))
         ser.strln(string("FXOS8700 driver started"))
     else
         ser.strln(string("FXOS8700 driver failed to start - halting"))
         repeat
 
-    cognew(isr, @_isr_stack)                    ' start ISR in another core
+    cognew(cog_isr{}, @_isr_stack)                    ' start ISR in another core
 
 #include "acceldemo.common.spinh"
 

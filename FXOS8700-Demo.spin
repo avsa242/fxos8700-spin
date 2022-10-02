@@ -6,7 +6,7 @@
         * 6DoF data output
     Copyright (c) 2022
     Started Sep 19, 2020
-    Updated Jul 13, 2022
+    Updated Oct 2, 2022
     See end of file for terms of use.
     --------------------------------------------
 
@@ -34,28 +34,32 @@ CON
 OBJ
 
     cfg: "core.con.boardcfg.flip"
-    imu: "sensor.imu.6dof.fxos8700"
+    sensor: "sensor.imu.6dof.fxos8700"
     ser: "com.serial.terminal.ansi"
     time: "time"
 
-PUB Setup{}
+PUB setup{}
 
     ser.start(SER_BAUD)
     time.msleep(10)
     ser.clear{}
     ser.strln(string("Serial terminal started"))
 
-    if (imu.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS, RES_PIN))
+    if (sensor.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS, RES_PIN))
         ser.strln(string("FXOS8700 driver started"))
     else
         ser.strln(string("FXOS8700 driver failed to start - halting"))
         repeat
 
-    imu.preset_active{}
+    sensor.preset_active{}
 
-    demo{}
+    repeat
+        ser.position(0, 3)
+        show_accel_data{}
+        show_mag_data{}
 
-#include "imudemo.common.spinh"                 ' code common to all IMU demos
+#include "acceldemo.common.spinh"
+#include "magdemo.common.spinh"
 
 DAT
 {
