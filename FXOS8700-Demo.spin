@@ -1,72 +1,59 @@
 {
-    --------------------------------------------
-    Filename: FXOS8700-Demo.spin
-    Author: Jesse Burt
-    Description: FXOS8700 driver demo
+----------------------------------------------------------------------------------------------------
+    Filename:       FXOS8700-Demo.spin
+    Description:    Demo of the FXOS8700 driver
         * 6DoF data output
-    Copyright (c) 2022
-    Started Sep 19, 2020
-    Updated Nov 19, 2022
-    See end of file for terms of use.
-    --------------------------------------------
-
-    Build-time symbols supported by driver:
-        -DFXOS8700_I2C (default if none specified)
-        -DFXOS8700_I2C_BC
+    Author:         Jesse Burt
+    Started:        Sep 19, 2020
+    Updated:        Jul 8, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
+
 CON
 
-    _clkmode    = cfg#_clkmode
-    _xinfreq    = cfg#_xinfreq
+    _clkmode    = cfg._clkmode
+    _xinfreq    = cfg._xinfreq
 
-' -- User-modifiable constants
-    SER_BAUD    = 115_200
-
-    { I2C configuration }
-    SCL_PIN     = 28
-    SDA_PIN     = 29
-    I2C_FREQ    = 400_000
-    ADDR_BITS   = %11
-
-    RES_PIN     = -1
-' --
 
 OBJ
 
-    cfg: "boardcfg.flip"
-    sensor: "sensor.imu.6dof.fxos8700"
-    ser: "com.serial.terminal.ansi"
-    time: "time"
+    cfg:    "boardcfg.flip"
+    time:   "time"
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
+    sensor: "sensor.imu.6dof.fxos8700" | SCL=28, SDA=29, I2C_FREQ=400_000, I2C_ADDR=%11, RST_PIN=-1
 
-PUB setup{}
 
-    ser.start(SER_BAUD)
-    time.msleep(10)
-    ser.clear{}
-    ser.strln(string("Serial terminal started"))
+PUB setup()
 
-    if (sensor.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS, RES_PIN))
-        ser.strln(string("FXOS8700 driver started"))
+    ser.start()
+    time.msleep(30)
+    ser.clear()
+    ser.strln(@"Serial terminal started")
+
+    if ( sensor.start() )
+        ser.strln(@"FXOS8700 driver started")
     else
-        ser.strln(string("FXOS8700 driver failed to start - halting"))
+        ser.strln(@"FXOS8700 driver failed to start - halting")
         repeat
 
-    sensor.preset_active{}
+    sensor.preset_active()
 
     repeat
         ser.pos_xy(0, 3)
-        show_accel_data{}
-        show_mag_data{}
-        if (ser.rx_check{} == "c")
-            cal_accel{}
-            cal_mag{}
+        show_accel_data()
+        show_mag_data()
+        if ( ser.getchar_noblock() == "c" )
+            cal_accel()
+            cal_mag()
 
-#include "acceldemo.common.spinh"
-#include "magdemo.common.spinh"
+#include "acceldemo.common.spinh"               ' use code common to all accelerometer
+#include "magdemo.common.spinh"                 '   and magnetometer demos
+
 
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

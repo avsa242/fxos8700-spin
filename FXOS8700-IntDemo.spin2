@@ -1,14 +1,13 @@
 {
-    --------------------------------------------
-    Filename: FXOS8700-IntDemo.spin2
-    Author: Jesse Burt
-    Description: Demo of the FXOS8700 driver (P2 version)
+----------------------------------------------------------------------------------------------------
+    Filename:       FXOS8700-IntDemo.spin2
+    Description:    Demo of the FXOS8700 driver
         * Interrupt functionality
-    Copyright (c) 2022
-    Started Sep 26, 2020
-    Updated Nov 7, 2022
-    See end of file for terms of use.
-    --------------------------------------------
+    Author:         Jesse Burt
+    Started:        Sep 26, 2020
+    Updated:        Jul 10, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
 
 CON
@@ -16,28 +15,30 @@ CON
     _clkfreq    = cfg._clkfreq_def
     _xtlfreq    = cfg._xtlfreq
 
+
+#include "core.con.click.spin2"
 ' -- User-modifiable constants
-    LED         = cfg.LED1
-    SER_BAUD    = 2_000_000
-
-    { I2C configuration }
-    SCL_PIN     = 0
-    SDA_PIN     = 1
-    I2C_FREQ    = 400_000
-    ADDR_BITS   = %11                           ' %00..%11 ($1E, 1D, 1C, 1F)
-
-    RES_PIN     = -1                            ' reset optional: -1 to disable
-' --
+    CLICK_BASE  = 16                            ' MikroE Click board base I/O pin (multiple of 16)
+'--
 
 ' Temperature scales
     C           = 0
     F           = 1
 
+
 OBJ
 
-    cfg : "boardcfg.p2eval"
-    ser : "com.serial.terminal.ansi"
-    sensor : "sensor.imu.6dof.fxos8700"
+    cfg:    "boardcfg.p2eval"
+
+    { MikroE Click boards (change CLICK_BASE above) }
+    'sensor: "sensor.imu.6dof.fxos8700" | SCL=SCL_PIN, SDA=SDA_PIN, I2C_FREQ=400_000, I2C_ADDR=%11
+
+    { custom I/O settings }
+    sensor: "sensor.imu.6dof.fxos8700" | SCL=0, SDA=1, I2C_FREQ=400_000, I2C_ADDR=%11, RST_PIN=-1
+
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=2_000_000
+
+
 
 PUB main() | i
 
@@ -45,8 +46,8 @@ PUB main() | i
     sensor.preset_active()
     sensor.temp_scale(C)
 
-    sensor.accel_scale(2)                   ' 2, 4, 8 (g's)
-    sensor.accel_data_rate(50)               ' 1, 6, 12, 50, 100, 200, 400, 800
+    sensor.accel_scale(2)                       ' 2, 4, 8 (g's)
+    sensor.accel_data_rate(50)                  ' 1, 6, 12, 50, 100, 200, 400, 800
     sensor.accel_int_mask(%11111111)
 
     { set up magnetometer interrupts; 0..32_767000 microGauss thresholds }
@@ -66,9 +67,9 @@ PUB main() | i
         ser.putchar(i+"X")
 
     repeat
-        if (ser.rx_check() == "c")
-            cal_accel{}
-            cal_mag{}
+        if ( ser.getchar_noblock() == "c" )
+            cal_accel()
+            cal_mag()
 
         ser.pos_xy(0, 4)
         show_accel_data()
@@ -77,31 +78,35 @@ PUB main() | i
         ser.printf(@"Mag int: %03.3b\n\r\n\r", sensor.mag_int())
         show_temp_data()
 
+
 PUB show_temp_data() | temp, tscl
 ' Show temperature data
     temp := sensor.temperature()
     tscl := lookupz(sensor.temp_scale(): "C", "F")
     ser.printf(@"Temp. (deg %c): %3.3d.%02.2d\n\r", tscl, (temp / 100), abs(temp // 100))
 
+
 PUB setup()
 
-    ser.start(SER_BAUD)
-    waitms(30)
+    ser.start()
+
     ser.clear()
     ser.strln(@"Serial terminal started")
 
-    if sensor.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS, RES_PIN)
+    if ( sensor.start() )
         ser.strln(@"FXOS8700 driver started")
     else
         ser.strln(@"FXOS8700 driver failed to start - halting")
         repeat
 
-#include "acceldemo.common.spin2h"
-#include "magdemo.common.spin2h"
+
+#include "acceldemo.common.spin2h"              ' Use code common to all accelerometer
+#include "magdemo.common.spin2h"                '   and magnetometer demos
+
 
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
