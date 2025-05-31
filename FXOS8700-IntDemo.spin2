@@ -5,15 +5,15 @@
         * Interrupt functionality
     Author:         Jesse Burt
     Started:        Sep 26, 2020
-    Updated:        Jul 10, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        May 31, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
 CON
 
-    _clkfreq    = cfg._clkfreq_def
-    _xtlfreq    = cfg._xtlfreq
+    _clkfreq    = 180_000_000
+    _xtlfreq    = 20_000_000
 
 
 #include "core.con.click.spin2"
@@ -26,9 +26,6 @@ CON
     F           = 1
 
 
-OBJ
-
-    cfg:    "boardcfg.p2eval"
 
     { MikroE Click boards (change CLICK_BASE above) }
     'sensor: "sensor.imu.6dof.fxos8700" | SCL=SCL_PIN, SDA=SDA_PIN, I2C_FREQ=400_000, I2C_ADDR=%11
@@ -40,7 +37,7 @@ OBJ
 
 
 
-PUB main() | i
+PUB main() | i, a[3], m[3]
 
     setup()
     sensor.preset_active()
@@ -53,7 +50,7 @@ PUB main() | i
     { set up magnetometer interrupts; 0..32_767000 microGauss thresholds }
     { *NOTE: The chip doesn't account for bias offsets when comparing the set thresholds to the
         measurement data. They are compared to the uncorrected data only. }
-    sensor.mag_int_duration()
+    sensor.mag_int_duration(0)
     sensor.mag_int_set_thresh_x(1_000000)
     sensor.mag_int_set_thresh_y(1_000000)
     sensor.mag_int_set_thresh_z(1_000000)
@@ -66,24 +63,78 @@ PUB main() | i
         ser.pos_x(12+(16*i))
         ser.putchar(i+"X")
 
+    sensor.preset_active()
+
     repeat
-        if ( ser.getchar_noblock() == "c" )
+        repeat
+        until sensor.accel_data_rdy()           ' wait for new accel/gyro data
+
+        ' copy accelerometer data (micro-g's) to an array here
+        sensor.accel_g(@a[sensor.X_AXIS], @a[sensor.Y_AXIS], @a[sensor.Z_AXIS])
+
+        repeat
+        until sensor.mag_data_rdy()             ' wait for new mag data
+
+        ' copy magnetometer data (micro-Gauss) to an array here
+        sensor.mag_gauss(@m[sensor.X_AXIS], @m[sensor.Y_AXIS], @m[sensor.Z_AXIS])
+
+        ser.pos_xy(0, 4)
+        show_data(@"Accel (g):  ", a[sensor.X_AXIS], a[sensor.Y_AXIS], a[sensor.Z_AXIS])
+        ser.printf(@"Accel int: %08.8b\n\r\n\r", sensor.accel_int())
+
+        show_data(@"Mag (Gs):   ", m[sensor.X_AXIS], m[sensor.Y_AXIS], m[sensor.Z_AXIS])
+        ser.printf(@"Mag int: %03.3b\n\r\n\r", sensor.mag_int())
+
+        show_temp_data()
+
+        if ( ser.getchar_noblock() == "c" )     ' press "c" to calibrate/zero the sensors
             cal_accel()
             cal_mag()
 
-        ser.pos_xy(0, 4)
-        show_accel_data()
-        ser.printf(@"Accel int: %08.8b\n\r\n\r", sensor.accel_int())
-        show_mag_data()
-        ser.printf(@"Mag int: %03.3b\n\r\n\r", sensor.mag_int())
-        show_temp_data()
+
+PUB show_data(p_str, x, y, z) | axis, tmp[3], sign
+
+    longmove(@tmp, @x, 3)
+
+    ser.str(p_str)
+    repeat axis from 0 to 2
+        ' The sign is normally taken from the whole part and just displayed.
+        ' Because we're showing values divided by 1_000_000, it won't show negative until the value
+        '   reaches -1_000_000 or less, so values like -0_800_000 will display without the '-',
+        '   so process the sign display separately here
+        if ( tmp[axis] < 0 )
+            sign := "-"
+        else
+            sign := " "
+        ser.printf(@"%c%d.%06d     ", sign, ...
+                                        abs(tmp[axis] / 1_000_000), ...
+                                        abs(tmp[axis] // 1_000_000) )
+    ser.newline()
 
 
 PUB show_temp_data() | temp, tscl
 ' Show temperature data
     temp := sensor.temperature()
     tscl := lookupz(sensor.temp_scale(): "C", "F")
-    ser.printf(@"Temp. (deg %c): %3.3d.%02.2d\n\r", tscl, (temp / 100), abs(temp // 100))
+    ser.printf(@"Temp. (deg %c): %3d.%02d\n\r", tscl, (temp / 100), abs(temp // 100))
+
+
+PUB cal_accel()
+' Calibrate the accelerometer
+    ser.pos_xy(0, 3)
+    ser.str(@"Calibrating accelerometer...")
+    sensor.calibrate_accel()
+    ser.pos_xy(0, 3)
+    ser.clear_ln()
+
+
+PUB cal_mag()
+' Calibrate the magnetometer
+    ser.pos_xy(0, 4)
+    ser.str(@"Calibrating magnetometer...")
+    sensor.calibrate_mag()
+    ser.pos_xy(0, 4)
+    ser.clear_ln()
 
 
 PUB setup()
@@ -100,13 +151,10 @@ PUB setup()
         repeat
 
 
-#include "acceldemo.common.spin2h"              ' Use code common to all accelerometer
-#include "magdemo.common.spin2h"                '   and magnetometer demos
-
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

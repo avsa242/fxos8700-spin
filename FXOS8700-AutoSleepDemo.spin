@@ -5,28 +5,27 @@
         * Auto-sleep functionality
     Author:         Jesse Burt
     Started:        Nov 6, 2021
-    Updated:        Jul 10, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        May 31, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
 CON
 
-    _clkmode    = cfg._clkmode
-    _xinfreq    = cfg._xinfreq
+    _clkmode    = xtal1+pll16x
+    _xinfreq    = 5_000_000
 
 ' -- User-modifiable constants
-    LED     = cfg.LED1
-    INT1    = 24                                ' FXOS8700 INT1 pin
+    LED         = 26
+    INT1        = 24                            ' FXOS8700 INT1 pin
 ' --
 
 
 OBJ
 
-    cfg:    "boardcfg.flip"
     time:   "time"
-    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
     sensor: "sensor.imu.6dof.fxos8700" | SCL=28, SDA=29, I2C_FREQ=400_000, I2C_ADDR=%11, RST_PIN=-1
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
 
 
 VAR
@@ -35,7 +34,7 @@ VAR
     long _intflag                               ' interrupt flag
 
 
-PUB main() | intsource, temp, sysmod
+PUB main() | intsource, temp, sysmod, a[3]
 
     setup()
     sensor.preset_active()                      ' default settings, but enable sensor power,
@@ -64,7 +63,13 @@ PUB main() | intsource, temp, sysmod
     ' When the sensor goes to sleep, it should turn off.
     repeat
         ser.pos_xy(0, 3)
-        show_accel_data()                       ' show accel data
+        repeat
+        until sensor.accel_data_rdy()           ' wait for new accel/gyro data
+
+        ' copy accelerometer data (micro-g's) to an array here
+        sensor.accel_g(@a[sensor.X_AXIS], @a[sensor.Y_AXIS], @a[sensor.Z_AXIS])
+        show_data(@"Accel (g):  ", a[sensor.X_AXIS], a[sensor.Y_AXIS], a[sensor.Z_AXIS])
+
         if ( _intflag )                         ' interrupt triggered
             intsource := sensor.accel_int()
             if ( intsource & sensor.INT_TRANS ) ' transient acceleration event
@@ -80,6 +85,35 @@ PUB main() | intsource, temp, sysmod
             cal_accel()                         ' to calibrate sensor offsets
 
 
+PUB cal_accel()
+' Calibrate the accelerometer
+    ser.pos_xy(0, 3)
+    ser.str(@"Calibrating accelerometer...")
+    sensor.calibrate_accel()
+    ser.pos_xy(0, 3)
+    ser.clear_ln()
+
+
+PUB show_data(p_str, x, y, z) | axis, tmp[3], sign
+
+    longmove(@tmp, @x, 3)
+
+    ser.str(p_str)
+    repeat axis from 0 to 2
+        ' The sign is normally taken from the whole part and just displayed.
+        ' Because we're showing values divided by 1_000_000, it won't show negative until the value
+        '   reaches -1_000_000 or less, so values like -0_800_000 will display without the '-',
+        '   so process the sign display separately here
+        if ( tmp[axis] < 0 )
+            sign := "-"
+        else
+            sign := " "
+        ser.printf(@"%c%d.%06.6d     ", sign, ...
+                                        ||(tmp[axis] / 1_000_000), ...
+                                        ||(tmp[axis] // 1_000_000) )
+    ser.newline()
+
+
 PRI cog_isr()
 ' Interrupt service routine
     dira[INT1] := 0                             ' INT1 as input
@@ -88,6 +122,7 @@ PRI cog_isr()
         _intflag := 1                           '   set flag
         waitpeq(|< INT1, |< INT1, 0)            ' now wait for it to clear
         _intflag := 0                           '   clear flag
+
 
 PUB setup()
 
@@ -104,12 +139,10 @@ PUB setup()
 
     cognew(cog_isr(), @_isr_stack)              ' start ISR in another core
 
-#include "acceldemo.common.spinh"               ' use code common to all accelerometer demos
-
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

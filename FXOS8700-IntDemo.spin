@@ -5,15 +5,15 @@
         * Interrupt functionality
     Author:         Jesse Burt
     Started:        Sep 26, 2020
-    Updated:        Jul 10, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        May 31, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
 CON
 
-    _clkmode    = cfg._clkmode
-    _xinfreq    = cfg._xinfreq
+    _clkmode    = xtal1+pll16x
+    _xinfreq    = 5_000_000
 
 
 ' Temperature scales
@@ -23,14 +23,12 @@ CON
 
 OBJ
 
-    cfg:    "boardcfg.flip"
     time:   "time"
-    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
     sensor: "sensor.imu.6dof.fxos8700" | SCL=28, SDA=29, I2C_FREQ=400_000, I2C_ADDR=%11, RST_PIN=-1
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
 
 
-
-PUB main() | i
+PUB main() | i, a[3], m[3]
 
     setup()
     sensor.preset_active()
@@ -56,24 +54,78 @@ PUB main() | i
         ser.pos_x(12+(16*i))
         ser.putchar(i+"X")
 
+    sensor.preset_active()
+
     repeat
-        if ( ser.getchar_noblock() == "c" )
+        repeat
+        until sensor.accel_data_rdy()           ' wait for new accel/gyro data
+
+        ' copy accelerometer data (micro-g's) to an array here
+        sensor.accel_g(@a[sensor.X_AXIS], @a[sensor.Y_AXIS], @a[sensor.Z_AXIS])
+
+        repeat
+        until sensor.mag_data_rdy()             ' wait for new mag data
+
+        ' copy magnetometer data (micro-Gauss) to an array here
+        sensor.mag_gauss(@m[sensor.X_AXIS], @m[sensor.Y_AXIS], @m[sensor.Z_AXIS])
+
+        ser.pos_xy(0, 4)
+        show_data(@"Accel (g):  ", a[sensor.X_AXIS], a[sensor.Y_AXIS], a[sensor.Z_AXIS])
+        ser.printf(@"Accel int: %08.8b\n\r\n\r", sensor.accel_int())
+
+        show_data(@"Mag (Gs):   ", m[sensor.X_AXIS], m[sensor.Y_AXIS], m[sensor.Z_AXIS])
+        ser.printf(@"Mag int: %03.3b\n\r\n\r", sensor.mag_int())
+
+        show_temp_data()
+
+        if ( ser.getchar_noblock() == "c" )     ' press "c" to calibrate/zero the sensors
             cal_accel()
             cal_mag()
 
-        ser.pos_xy(0, 4)
-        show_accel_data()
-        ser.printf1(@"Accel int: %08.8b\n\r\n\r", sensor.accel_int())
-        show_mag_data()
-        ser.printf1(@"Mag int: %03.3b\n\r\n\r", sensor.mag_int())
-        show_temp_data()
+
+PUB show_data(p_str, x, y, z) | axis, tmp[3], sign
+
+    longmove(@tmp, @x, 3)
+
+    ser.str(p_str)
+    repeat axis from 0 to 2
+        ' The sign is normally taken from the whole part and just displayed.
+        ' Because we're showing values divided by 1_000_000, it won't show negative until the value
+        '   reaches -1_000_000 or less, so values like -0_800_000 will display without the '-',
+        '   so process the sign display separately here
+        if ( tmp[axis] < 0 )
+            sign := "-"
+        else
+            sign := " "
+        ser.printf(@"%c%d.%06d     ", sign, ...
+                                        ||(tmp[axis] / 1_000_000), ...
+                                        ||(tmp[axis] // 1_000_000) )
+    ser.newline()
 
 
 PUB show_temp_data() | temp, tscl
 ' Show temperature data
     temp := sensor.temperature()
-    tscl := lookupz(sensor.temp_scale(-2): "C", "F")
-    ser.printf3(@"Temp. (deg %c): %3.3d.%02.2d\n\r", tscl, (temp / 100), ||(temp // 100))
+    tscl := lookupz(sensor.temp_scale(): "C", "F")
+    ser.printf(@"Temp. (deg %c): %3d.%02d\n\r", tscl, (temp / 100), ||(temp // 100))
+
+
+PUB cal_accel()
+' Calibrate the accelerometer
+    ser.pos_xy(0, 3)
+    ser.str(@"Calibrating accelerometer...")
+    sensor.calibrate_accel()
+    ser.pos_xy(0, 3)
+    ser.clear_ln()
+
+
+PUB cal_mag()
+' Calibrate the magnetometer
+    ser.pos_xy(0, 4)
+    ser.str(@"Calibrating magnetometer...")
+    sensor.calibrate_mag()
+    ser.pos_xy(0, 4)
+    ser.clear_ln()
 
 
 PUB setup()
@@ -90,13 +142,10 @@ PUB setup()
         repeat
 
 
-#include "acceldemo.common.spinh"               ' Use code common to all accelerometer
-#include "magdemo.common.spinh"                 '   and magnetometer demos
-
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

@@ -5,23 +5,22 @@
         * click-detection functionality
     Author:         Jesse Burt
     Started:        Nov 19, 2021
-    Updated:        Jul 10, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        May 31, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
 CON
 
-    _clkmode    = cfg._clkmode
-    _xinfreq    = cfg._xinfreq
+    _clkmode    = xtal1+pll16x
+    _xinfreq    = 5_000_000
 
 
 OBJ
 
-    cfg:    "boardcfg.flip"
     time:   "time"
-    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
     sensor: "sensor.imu.6dof.fxos8700" | SCL=28, SDA=29, I2C_FREQ=400_000, I2C_ADDR=%11, RST_PIN=-1
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
 
 
 PUB main() | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_clicked
@@ -40,12 +39,12 @@ PUB main() | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_cli
         y_clicked := ((click_src >> 5) & 1)
         x_clicked := ((click_src >> 4) & 1)
         ser.pos_xy(0, 3)
-        ser.printf1(@"Click interrupt: %s\n\r", yesno(int_act))
-        ser.printf1(@"Double-clicked:  %s\n\r", yesno(dclicked))
-        ser.printf1(@"Single-clicked:  %s\n\r", yesno(sclicked))
-        ser.printf1(@"Z-axis clicked:  %s\n\r", yesno(z_clicked))
-        ser.printf1(@"Y-axis clicked:  %s\n\r", yesno(y_clicked))
-        ser.printf1(@"X-axis clicked:  %s\n\r", yesno(x_clicked))
+        ser.printf(@"Click interrupt: %s\n\r", yesno(int_act))
+        ser.printf(@"Double-clicked:  %s\n\r", yesno(dclicked))
+        ser.printf(@"Single-clicked:  %s\n\r", yesno(sclicked))
+        ser.printf(@"Z-axis clicked:  %s\n\r", yesno(z_clicked))
+        ser.printf(@"Y-axis clicked:  %s\n\r", yesno(y_clicked))
+        ser.printf(@"X-axis clicked:  %s\n\r", yesno(x_clicked))
 
     ser.show_cursor()                           ' restore terminal cursor
     repeat
@@ -75,7 +74,7 @@ PUB setup()
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

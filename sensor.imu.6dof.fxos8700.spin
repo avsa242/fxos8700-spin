@@ -4,8 +4,8 @@
     Description:    Driver for the FXOS8700 6DoF IMU
     Author:         Jesse Burt
     Started:        Sep 19, 2020
-    Updated:        Jul 8, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        May 31, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -589,7 +589,7 @@ PUB opmode(mode=-2): curr_mode
             return (curr_mode & core.M_HMS_BITS)
 
 
-PUB reset() | tmp
+PUB reset()
 ' Perform hard or soft-reset
     if ( lookdown(_RES: 0..31) )
         outa[_RES] := 0
@@ -598,8 +598,7 @@ PUB reset() | tmp
         time.usleep(core.TPOR)
         outa[_RES] := 0
     else
-        tmp := core.SRESET
-        writereg(core.CTRL_REG2, tmp)
+        writereg(core.CTRL_REG2, core.SRESET)
         time.usleep(core.TPOR)
 
 PUB sys_mode(): sysmod 'XXX temporary
@@ -694,7 +693,7 @@ PRI writereg(reg_nr, val=0, len=1) | cmd_pkt
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
