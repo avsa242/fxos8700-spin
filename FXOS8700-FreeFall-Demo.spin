@@ -49,7 +49,7 @@ PUB main() | intsource, temp, a[3]
     '   0.315g's for a minimum time of 30ms. This can be tuned using
     '   sensor.freefall_thresh() and sensor.freefall_time():
     sensor.freefall_thresh(0_315000)            ' 0.315g's
-    sensor.freefall_time(30_000)                ' 30_000us/30ms
+    sensor.freefall_set_time(30_000)            ' 30_000us/30ms
     repeat
         ser.pos_xy(0, 3)
         repeat

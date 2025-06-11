@@ -26,6 +26,7 @@ CON
     F           = 1
 
 
+OBJ
 
     { MikroE Click boards (change CLICK_BASE above) }
     'sensor: "sensor.imu.6dof.fxos8700" | SCL=SCL_PIN, SDA=SDA_PIN, I2C_FREQ=400_000, I2C_ADDR=%11

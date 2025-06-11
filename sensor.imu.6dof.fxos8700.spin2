@@ -213,7 +213,7 @@ PUB preset_freefall()
     reset()
     accel_data_rate(400)
     accel_scale(2)
-    freefall_time(30_000)                       ' 30_000us/30ms min time
+    freefall_set_time(30_000)                   ' 30_000us/30ms min time
     freefall_thresh(0_315000)                   ' 0.315g's
     freefall_axis_ena(%111)                     ' all axes
     accel_opmode(ACTIVE)
