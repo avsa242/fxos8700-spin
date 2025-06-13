@@ -644,6 +644,106 @@ PUB temp_data_rdy(): flag
     return TRUE
 
 
+pub vec_mag_debounce_period(): t
+' Get vector-magnitude function debounce timer value
+'   Returns:    time in microseconds
+    return ( readreg(core.A_VECM_CNT) * (1_000000 / accel_data_rate() ) )
+
+
+pub vec_mag_func_enabled(e=-2): c
+' Enable accelerometer vector-magnitude function
+'   c:  true (-1 or 1) or false (0)
+'       other values return the current setting
+    c := readreg(core.A_VECM_CFG)
+    if ( e == 0 or abs(e) == 1 )
+        e := (c & core.VECM_EN_MASK) | ( (e & 1) << core.VECM_EN)
+        writereg(core.A_VECM_CFG, e)
+    else
+        return ( ( (c >> core.VECM_EN) & 1) == 1)
+
+
+pub vec_mag_init_vals(x, y, z) | tmp[2]
+' Get vector-magnitude initial reference values
+'   x, y, z:    pointers to locations to store current accelerometer reference values
+'       (values will be in micro-g's, signed)
+'   NOTE: accel_scale() must be called prior to calling this method
+    tmp[0] := tmp[1] := 0
+    readreg(core.A_VECM_INITX_MSB, 6, @tmp)
+    long[x] := (tmp.word[X_AXIS] * _ares)
+    long[y] := (tmp.word[Y_AXIS] * _ares)
+    long[z] := (tmp.word[Z_AXIS] * _ares)
+
+
+con #0, VECM_REF_CURRENT, VECM_REF_INIT
+pub vec_mag_initial_ref_val_src(s): c
+' Set the source of vector-magnitude initial reference values
+'   s:
+'       VECM_REF_CURRENT (0):   use current accelerometer output data
+'           (data current as of the time vec_mag_func_enabled(true) is called)
+'       VECM_REF_INIT (1):      use values set with vec_mag_init_vals()
+'       other values return the current setting
+    c := readreg(core.A_VECM_CFG)
+    if ( (s == 0) or (s == 1) )
+        s := (c & core.VECM_INITM_MASK) | (s << core.VECM_INITM)
+        writereg(core.A_VECM_CFG, s)
+    else
+        return ( (c >> core.VECM_INITM) & 1)
+
+
+pub vec_mag_int_latch_ena(s): cs
+' Enable latching of vector-magnitude interrupts
+'   s:  true (-1 or 1) or false (0)
+'       other values return the current setting
+    cs := readreg(core.A_VECM_CFG)
+    if ( (s == 0) or (abs(s) == 1) )
+        s := (cs & core.VECM_ELE_MASK) | ( (s & 1) << core.VECM_ELE)
+        writereg(core.A_VECM_CFG, s)
+    else
+        return ( ( (cs >> core.VECM_ELE) & 1) == 1 )
+
+
+pub vec_mag_set_debounce_period(t)
+' Set vector-magnitude function debounce timer
+'   t:  time in microseconds
+    t := (t / (1_000000 / accel_data_rate() ) )
+    writereg(core.A_VECM_CNT, t)
+
+pub vec_mag_set_init_vals(x, y, z)
+' Set vector-magnitude initial reference values
+'   x, y, z:    accelerometer reference values in micro-g's (1_000000 = 1g)
+'   NOTE: accel_scale() must be called prior to calling this method
+    writereg(core.A_VECM_INITX_MSB, (x / _ares), 2)
+    writereg(core.A_VECM_INITY_MSB, (y / _ares), 2)
+    writereg(core.A_VECM_INITZ_MSB, (z / _ares), 2)
+
+
+pub vec_mag_set_thresh(v)
+' Set vector-magnitude function acceleration threshold
+'   v:  value in micro-g's (unsigned)
+    writereg(core.A_VECM_THS_MSB, ( (v / _ares) & core.VECM_THS_BITS), 2)
+
+
+pub vec_mag_thresh(): v
+' Get the currently set vector-magnitude function acceleration threshold
+'   v:  value in micro-g's (unsigned)
+    return ( (readreg(core.A_VECM_THS_MSB, 2) & core.VECM_THS_BITS) * _ares )
+
+
+pub vec_mag_updated_ref_val_src(s): c
+' Set the source of vector-magnitude updated reference values
+'   s:
+'       VECM_REF_CURRENT (0):   use current accelerometer output data
+'       VECM_REF_INIT (1):      continue to use reference values loaded when the vector-magnitude
+'                               function was enabled
+'       other values return the current setting
+    c := readreg(core.A_VECM_CFG)
+    if ( (s == 0) or (s == 1) )
+        s := (c & core.VECM_UPDM_MASK) | (s << core.VECM_UPDM)
+        writereg(core.A_VECM_CFG, s)
+    else
+        return ( (c >> core.VECM_UPDM) & 1)
+
+
 PRI cache_opmode()
 ' Store the current operating mode, and switch to standby if different
 '   (required for modifying some registers)
