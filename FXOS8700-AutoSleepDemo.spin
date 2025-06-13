@@ -5,7 +5,7 @@
         * Auto-sleep functionality
     Author:         Jesse Burt
     Started:        Nov 6, 2021
-    Updated:        May 31, 2025
+    Updated:        Jun 13, 2025
     Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -34,31 +34,34 @@ VAR
     long _intflag                               ' interrupt flag
 
 
-PUB main() | intsource, temp, sysmod, a[3]
+PUB main() | a[3]
 
     setup()
-    sensor.preset_active()                      ' default settings, but enable sensor power,
-                                                ' and set scale factors
-    sensor.accel_int_polarity(sensor.LOW)
-    sensor.accel_data_rate(100)                 ' 100Hz ODR when active
-    sensor.auto_sleep_ena(true)                 ' enable auto-sleep
-    sensor.accel_sleep_pwr_mode(sensor.LOPWR)   ' lo-power mode when sleeping
-    sensor.accel_pwr_mode(sensor.HIGHRES)       ' high-res mode when awake
-    sensor.trans_axis_ena(%011)                 ' transient detection on X, Y
-    sensor.trans_thresh(0_252000)               ' set thresh to 0.252g (0..8g)
-    sensor.trans_set_cnt(1)                     ' reset counter
-    sensor.inact_set_time(5_120)                ' inactivity timeout ~5sec
-    sensor.inact_int(sensor.WAKE_TRANS)         ' wake on transient accel
-    sensor.accel_int_mask(sensor.INT_AUTOSLPWAKE | sensor.INT_TRANS)
-    sensor.accel_int_routing(sensor.INT_AUTOSLPWAKE | sensor.INT_TRANS)
-    sensor.auto_sleep_data_rate(6)              ' 6Hz ODR when sleeping
-    dira[LED] := 1
+    sensor.opmode(sensor.ACCEL)                 ' can be ACCEL or BOTH
+    sensor.accel_scale(2)
+    sensor.auto_sleep_ena(true)                 ' enable auto-sleep feature
+    sensor.accel_pwr_mode(sensor.LOPWR)         ' low-power mode
+    sensor.inact_int(sensor.WAKE_VECM)          ' inactivity interrupt mask: vector-magnitude
+    sensor.accel_int_output_mode(sensor.INTMD_PP)   ' INTx pin output mode: push-pull or open-drain
+    sensor.accel_int_mask(sensor.INT_VECM)      ' interrupt on vector-magnitude event
+    sensor.accel_int_routing(sensor.INT_VECM)   ' set to route to INT1, clear to route to INT2
+    sensor.inact_set_time(1_920)                ' inactivity time (milliseconds)
+    sensor.fifo_trig_int_set_mask(0)            ' disable FIFO trigger interrupt
+    sensor.vec_mag_int_latch_ena(true)          ' latch interrupts
+    sensor.vec_mag_initial_ref_val_src(sensor.VECM_REF_CURRENT)
+    sensor.vec_mag_updated_ref_val_src(sensor.VECM_REF_CURRENT)
+    sensor.vec_mag_func_enabled(true)           ' enable vector-magnitude function
+    sensor.vec_mag_set_thresh(0_252000)         ' trigger interrupt at 0.252g or higher
+    sensor.accel_data_rate(6)                   ' output data rate when awake
+    sensor.auto_sleep_data_rate(50)             '   and when asleep
+    sensor.accel_opmode(sensor.ACTIVE)
+
 
     ' The demo continuously displays the current accelerometer data.
-    ' When the sensor goes to sleep after approx. 5 seconds, the change
-    '   in data rate is visible as a slowed update of the display.
-    ' To wake the sensor, shake it along the X and/or Y axes
-    '   by at least the amount set in trans_thresh() above.
+    ' When the sensor goes to sleep after the time set by inact_set_time() above, the change
+    '   in data rate is visible as a faster update of the display.
+    ' To wake the sensor, shake it along the X and/or Y axes (or tap it)
+    '   by at least the amount set in vec_mag_set_thresh() above.
     ' When the sensor is awake, the LED should be on.
     ' When the sensor goes to sleep, it should turn off.
     repeat
@@ -70,16 +73,10 @@ PUB main() | intsource, temp, sysmod, a[3]
         sensor.accel_g(@a[sensor.X_AXIS], @a[sensor.Y_AXIS], @a[sensor.Z_AXIS])
         show_data(@"Accel (g):  ", a[sensor.X_AXIS], a[sensor.Y_AXIS], a[sensor.Z_AXIS])
 
-        if ( _intflag )                         ' interrupt triggered
-            intsource := sensor.accel_int()
-            if ( intsource & sensor.INT_TRANS ) ' transient acceleration event
-                temp := sensor.trans_interrupt()' clear the trans. interrupt
-            if ( intsource & sensor.INT_AUTOSLPWAKE )
-                sysmod := sensor.sys_mode()
-                if ( sysmod & sensor.SLEEP )    ' op. mode is sleep,
-                    outa[LED] := 0              '   so turn LED off
-                elseif (sysmod & sensor.ACTIVE) ' else active,
-                    outa[LED] := 1              '   turn it on
+        if ( _intflag )
+            ser.str(@"AWAKE (interrupt)")
+        else
+            ser.clear_line()
 
         if ( ser.getchar_noblock() == "c" )     ' press the 'c' key in the demo
             cal_accel()                         ' to calibrate sensor offsets
@@ -117,12 +114,14 @@ PUB show_data(p_str, x, y, z) | axis, tmp[3], sign
 PRI cog_isr()
 ' Interrupt service routine
     dira[INT1] := 0                             ' INT1 as input
+    dira[LED] := 1
     repeat
         waitpne(|< INT1, |< INT1, 0)            ' wait for INT1 (active low)
         _intflag := 1                           '   set flag
+        outa[LED] := 1
         waitpeq(|< INT1, |< INT1, 0)            ' now wait for it to clear
         _intflag := 0                           '   clear flag
-
+        outa[LED] := 0
 
 PUB setup()
 

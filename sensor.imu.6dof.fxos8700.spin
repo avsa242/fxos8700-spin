@@ -295,6 +295,27 @@ PUB fifo_threshold(level=-2): curr_lvl
             return (curr_lvl & core.F_WMRK_BITS)
 
 
+pub fifo_trig_int_mask(): m
+' Read the currently set FIFO trigger interrupt mask
+'   Returns: bitmask (only bits 5..1 are valid)
+    return readreg(core.TRIG_CFG)
+
+
+pub fifo_trig_int_set_mask(m)
+' Set the FIFO trigger interrupt mask
+'   When the set interrupt(s) occur, the FIFO will stop collecting data. The data that led
+'       up to the event (which will be stored in the FIFO) can then by analyzed.
+'   NOTE: fifo_mode() must be set to TRIGGER to utilize this feature.
+'   m:
+'       5:  transient interrupt
+'       4:  landscape/portrait orientation interrupt
+'       3:  pulse interrupt
+'       2:  freefall/motion interrupt
+'       1:  acceleration vector/magnitude interrupt
+'       (all other bits will be ignored)
+    writereg(core.TRIG_CFG, (m & core.TRIG_CFG_MASK) )
+
+
 PUB fifo_nr_unread(): nr_samples
 ' Number of unread samples stored in FIFO
 '   Returns: 0..32
