@@ -112,19 +112,19 @@ PUB show_temp_data() | temp, tscl
 
 PUB cal_accel()
 ' Calibrate the accelerometer
-    ser.pos_xy(0, 3)
+    ser.pos_xy(0, 4)
     ser.str(@"Calibrating accelerometer...")
     sensor.calibrate_accel()
-    ser.pos_xy(0, 3)
+    ser.pos_xy(0, 4)
     ser.clear_ln()
 
 
 PUB cal_mag()
 ' Calibrate the magnetometer
-    ser.pos_xy(0, 4)
+    ser.pos_xy(0, 7)
     ser.str(@"Calibrating magnetometer...")
     sensor.calibrate_mag()
-    ser.pos_xy(0, 4)
+    ser.pos_xy(0, 7)
     ser.clear_ln()
 
 

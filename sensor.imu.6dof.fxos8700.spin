@@ -4,10 +4,13 @@
     Description:    Driver for the FXOS8700 6DoF IMU
     Author:         Jesse Burt
     Started:        Sep 19, 2020
-    Updated:        Jun 9, 2025
+    Updated:        Jun 13, 2025
     Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
+
+' enable FXOS8700-specific code in shared/common code
+#define FXOS8700
 
 #include "sensor.accel.common.spinh"            ' use code common to all accelerometer,
 #include "sensor.magnetometer.common.spinh"     '   magnetometer,
