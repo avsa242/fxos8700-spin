@@ -5,8 +5,8 @@
         * Auto-sleep functionality
     Author:         Jesse Burt
     Started:        Nov 6, 2021
-    Updated:        Jun 13, 2025
-    Copyright (c) 2025 - See end of file for terms of use.
+    Updated:        Aug 6, 2026
+    Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -36,7 +36,7 @@ VAR
 PUB main() | a[3]
 
     setup()
-    sensor.opmode(sensor.ACCEL)                 ' can be ACCEL or BOTH
+    sensor.sensors_enabled(sensor.ACCEL)        ' can be ACCEL or BOTH
     sensor.accel_scale(2)
     sensor.auto_sleep_ena(true)                 ' enable auto-sleep feature
     sensor.accel_pwr_mode(sensor.LOPWR)         ' low-power mode
@@ -128,7 +128,7 @@ PRI cog_isr()
 PUB setup()
 
     ser.start()
-    waitms(30)
+
     ser.clear()
     ser.strln(@"Serial terminal started")
 
@@ -143,7 +143,7 @@ PUB setup()
 
 DAT
 {
-Copyright 2025 Jesse Burt
+Copyright 2026 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

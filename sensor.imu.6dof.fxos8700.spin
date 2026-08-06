@@ -189,7 +189,7 @@ PUB preset_active()
 '   Active/measurement mode
     reset()
     accel_opmode(ACTIVE)
-    opmode(BOTH)
+    sensors_enabled(BOTH)
     accel_scale(2)
     accel_data_rate(50)
     mag_scale(12)
@@ -599,20 +599,20 @@ PUB mag_thresh_int(): int_src
     return readreg(core.M_THS_SRC)
 
 
-PUB opmode(mode=-2): curr_mode
-' Set operating mode
-'   Valid values:
-'      *ACCEL (0): Accelerometer only
-'       MAG (1): Magnetometer only
-'       BOTH (3): Both sensors active
-'   Any other value polls the chip and returns the current setting
-    curr_mode := readreg(core.M_CTRL_REG1)
-    case mode
+PUB sensors_enabled(md=-2): c
+' Select enabled sensors
+'   md:
+'       ACCEL (0):      Accelerometer only (default)
+'       MAG (1):        Magnetometer only
+'       BOTH (3):       Both sensors active
+'       other values:   returns the current setting
+    c := readreg(core.M_CTRL_REG1)
+    case md
         ACCEL, MAG, BOTH:
-            mode := ((curr_mode & core.M_HMS_MASK) | mode)
-            writereg(core.M_CTRL_REG1, mode)
+            md := ((c & core.M_HMS_MASK) | md)
+            writereg(core.M_CTRL_REG1, md)
         other:
-            return (curr_mode & core.M_HMS_BITS)
+            return (c & core.M_HMS_BITS)
 
 
 PUB reset()
